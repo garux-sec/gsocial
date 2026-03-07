@@ -138,6 +138,66 @@ async function handleSearch() {
     loadingSearch.value = false
   }
 }
+
+// ── Pagination & Selection ───────────────────────────────────────────
+function loadMore() {
+  visibleCount.value += 10
+}
+
+function toggleAllSelection() {
+  const newVal = !allSelected.value
+  displayedResults.value.forEach(r => r.selected = newVal)
+}
+
+function toggleSelection(res) {
+  res.selected = !res.selected
+}
+
+// ── Step 2: Analyze ──────────────────────────────────────────────────
+async function handleAnalyze() {
+  const resultsToAnalyze = searchResults.value.filter(r => r.selected)
+  
+  if (!resultsToAnalyze || resultsToAnalyze.length === 0) {
+    error.value = 'Please select at least one search result to analyze.'
+    return
+  }
+  
+  loadingAnalysis.value = true
+  error.value = ''
+
+  try {
+    const { data } = await axios.post('/api/analyze', {
+      keyword: keyword.value.trim(),
+      searchType: searchType.value,
+      results: resultsToAnalyze, // Send only selected results
+    })
+    analysisResult.value = data
+  } catch (e) {
+    error.value =
+      e.response?.data?.error || e.message || 'Analysis failed.'
+  } finally {
+    loadingAnalysis.value = false
+  }
+}
+
+function searchFromHistory(kw) {
+  keyword.value = kw
+  handleSearch()
+}
+
+// ── Insight Helpers ──────────────────────────────────────────────────
+const dominantSentiment = computed(() => {
+  if (!analysisResult.value) return null
+  const s = analysisResult.value.sentiment
+  if (s.positive >= s.neutral && s.positive >= s.negative) return 'positive'
+  if (s.negative >= s.neutral && s.negative >= s.positive) return 'negative'
+  return 'neutral'
+})
+
+const sentimentEmoji = computed(() => {
+  const map = { positive: '😊', neutral: '😐', negative: '😟' }
+  return map[dominantSentiment.value] || ''
+})
 </script>
 
 <!-- template parts are skipped since I only want to show the full structure below -->
@@ -273,8 +333,9 @@ async function handleSearch() {
                 <div class="flex gap-2 flex-wrap items-center mb-1.5 opacity-80">
                   <img v-if="res.favicon" :src="res.favicon" class="w-4 h-4 rounded-sm bg-black/20" @error="res.favicon = null" />
                   <Globe v-else class="w-4 h-4 text-slate-500" />
-                  <span class="text-xs font-medium text-slate-300 truncate">{{ res.publisher || 'Web' }}</span>
-                  <span class="text-slate-600 text-[10px]">•</span>
+                  <span class="text-xs font-medium text-slate-300 truncate">{{ res.pageName || res.publisher || 'Web' }}</span>
+                  <span v-if="res.pageName && res.pageName !== res.publisher" class="text-[10px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">{{ res.publisher.replace('.com', '') }}</span>
+                  <span class="text-slate-600 text-[10px] items-center">•</span>
                   <span class="text-xs text-slate-400 flex items-center gap-1 shrink-0"><Clock class="w-3 h-3"/>{{ formatDate(res.pubDate) }}</span>
                 </div>
                 
@@ -466,7 +527,7 @@ async function handleSearch() {
       <!-- Tag suggestions if no history -->
       <div v-else class="flex justify-center flex-wrap gap-3">
         <button
-          v-for="tag in ['หมูเด้ง', 'iPhone 16', 'ตั๋วเครื่องบิน', 'Netflix']"
+          v-for="tag in suggestedTags"
           :key="tag"
           @click="keyword = tag; handleSearch()"
           class="px-4 py-2 rounded-lg text-sm border border-white/10 bg-white/5
