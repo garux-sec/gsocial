@@ -402,63 +402,6 @@ const sentimentEmoji = computed(() => {
             </div>
           </div>
 
-          <!-- Source Media Cards with QR Codes -->
-          <div class="glass p-6 border-white/10">
-            <div class="flex items-center gap-2 mb-5">
-              <ExternalLink class="w-5 h-5 text-blue-400" />
-              <h2 class="font-bold text-white text-lg">ตัวอย่างสื่อที่น่าสนใจ</h2>
-              <span class="ml-auto text-xs text-slate-500">{{ analysisResult.enrichedResults?.length || 0 }} แหล่งข้อมูล</span>
-            </div>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div v-for="(res, i) in (analysisResult.enrichedResults || [])" :key="i" 
-                   class="bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-xl border border-white/5 p-4 hover:border-blue-500/30 transition-all duration-300 group">
-                <!-- Platform Icon + Badge -->
-                <div class="flex items-center gap-2 mb-3">
-                  <img v-if="res.link?.includes('youtube.com') || res.link?.includes('youtu.be')" 
-                       src="https://www.google.com/s2/favicons?domain=youtube.com&sz=64" 
-                       class="w-8 h-8 rounded-lg" alt="YouTube">
-                  <img v-else-if="res.link?.includes('facebook.com')" 
-                       src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64" 
-                       class="w-8 h-8 rounded-lg" alt="Facebook">
-                  <img v-else-if="res.link?.includes('tiktok.com')" 
-                       src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64" 
-                       class="w-8 h-8 rounded-lg" alt="TikTok">
-                  <img v-else-if="res.link?.includes('instagram.com')" 
-                       src="https://www.google.com/s2/favicons?domain=instagram.com&sz=64" 
-                       class="w-8 h-8 rounded-lg" alt="Instagram">
-                  <img v-else 
-                       src="https://www.google.com/s2/favicons?domain=google.com&sz=64" 
-                       class="w-8 h-8 rounded-lg" alt="Web">
-                  
-                  <!-- Source Badge -->
-                  <span v-if="res.commentSource === 'YouTube'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase">YouTube</span>
-                  <span v-else-if="res.commentSource === 'Facebook'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">Facebook</span>
-                  <span v-else-if="res.commentSource === 'TikTok'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 uppercase">TikTok</span>
-                  <span v-else-if="res.commentSource === 'Instagram'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30 uppercase">Instagram</span>
-                  
-                  <span v-if="res.comments?.length" class="ml-auto text-[10px] text-slate-500">{{ res.comments.length }} ความคิดเห็น</span>
-                </div>
-                
-                <!-- Title -->
-                <a :href="res.link" target="_blank" class="text-slate-200 text-sm font-medium leading-snug mb-3 block hover:text-blue-400 transition-colors line-clamp-2">
-                  {{ res.title }}
-                </a>
-                
-                <!-- QR Code + Link -->
-                <div class="flex items-end justify-between mt-auto pt-3 border-t border-white/5">
-                  <div class="flex-1 min-w-0 pr-3">
-                    <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">ลิงก์ต้นทาง</p>
-                    <a :href="res.link" target="_blank" class="text-blue-400 text-xs hover:underline truncate block">
-                      {{ res.link }}
-                    </a>
-                  </div>
-                  <div class="bg-white rounded-lg p-1.5 shadow-lg shrink-0 group-hover:scale-105 transition-transform">
-                    <QrcodeVue :value="res.link || ''" :size="64" level="M" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <!-- Public Opinion Section (เชิงบวก / เชิงลบ) -->
           <div class="glass p-6 border-white/10">
@@ -531,6 +474,64 @@ const sentimentEmoji = computed(() => {
                   <span class="w-5 h-5 rounded bg-negative shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
                   <span class="text-white font-semibold text-base">เชิงลบ</span>
                   <span class="text-negative font-bold text-lg ml-2">{{ analysisResult.sentiment.negative }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Source Media Cards with QR Codes (ตัวอย่างสื่อที่น่าสนใจ) -->
+          <div class="glass p-6 border-white/10">
+            <div class="flex items-center gap-2 mb-5">
+              <ExternalLink class="w-5 h-5 text-blue-400" />
+              <h2 class="font-bold text-white text-lg">ตัวอย่างสื่อที่น่าสนใจ</h2>
+              <span class="ml-auto text-xs text-slate-500">{{ analysisResult.enrichedResults?.length || 0 }} แหล่งข้อมูล</span>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div v-for="(res, i) in (analysisResult.enrichedResults || [])" :key="i" 
+                   class="bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-xl border border-white/5 p-4 hover:border-blue-500/30 transition-all duration-300 group">
+                <!-- Platform Icon + Badge -->
+                <div class="flex items-center gap-2 mb-3">
+                  <img v-if="res.link?.includes('youtube.com') || res.link?.includes('youtu.be')" 
+                       src="https://www.google.com/s2/favicons?domain=youtube.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="YouTube">
+                  <img v-else-if="res.link?.includes('facebook.com')" 
+                       src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="Facebook">
+                  <img v-else-if="res.link?.includes('tiktok.com')" 
+                       src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="TikTok">
+                  <img v-else-if="res.link?.includes('instagram.com')" 
+                       src="https://www.google.com/s2/favicons?domain=instagram.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="Instagram">
+                  <img v-else 
+                       src="https://www.google.com/s2/favicons?domain=google.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="Web">
+                  
+                  <!-- Source Badge -->
+                  <span v-if="res.commentSource === 'YouTube'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase">YouTube</span>
+                  <span v-else-if="res.commentSource === 'Facebook'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">Facebook</span>
+                  <span v-else-if="res.commentSource === 'TikTok'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 uppercase">TikTok</span>
+                  <span v-else-if="res.commentSource === 'Instagram'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30 uppercase">Instagram</span>
+                  
+                  <span v-if="res.comments?.length" class="ml-auto text-[10px] text-slate-500">{{ res.comments.length }} ความคิดเห็น</span>
+                </div>
+                
+                <!-- Title -->
+                <a :href="res.link" target="_blank" class="text-slate-200 text-sm font-medium leading-snug mb-3 block hover:text-blue-400 transition-colors line-clamp-2">
+                  {{ res.title }}
+                </a>
+                
+                <!-- QR Code + Link -->
+                <div class="flex items-end justify-between mt-auto pt-3 border-t border-white/5">
+                  <div class="flex-1 min-w-0 pr-3">
+                    <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">ลิงก์ต้นทาง</p>
+                    <a :href="res.link" target="_blank" class="text-blue-400 text-xs hover:underline truncate block">
+                      {{ res.link }}
+                    </a>
+                  </div>
+                  <div class="bg-white rounded-lg p-1.5 shadow-lg shrink-0 group-hover:scale-105 transition-transform">
+                    <QrcodeVue :value="res.link || ''" :size="64" level="M" />
+                  </div>
                 </div>
               </div>
             </div>
