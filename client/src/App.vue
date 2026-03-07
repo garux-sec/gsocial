@@ -487,8 +487,10 @@ const sentimentEmoji = computed(() => {
               <div v-for="(res, i) in analysisResult.enrichedResults" :key="i">
                 <div v-if="res.comments && res.comments.length > 0" class="bg-black/20 rounded-xl p-4 border border-white/5">
                   <div class="flex items-center gap-2 mb-3">
-                    <span v-if="res.commentSource === 'YouTube'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-wider">▶ YouTube</span>
-                    <span v-else-if="res.commentSource === 'Facebook'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-wider">📘 Facebook</span>
+                    <span v-if="res.commentSource === 'YouTube'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-wider shrink-0">▶ YouTube</span>
+                    <span v-else-if="res.commentSource === 'Facebook'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-wider shrink-0">📘 Facebook</span>
+                    <span v-else-if="res.commentSource === 'TikTok'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 uppercase tracking-wider shrink-0">🎵 TikTok</span>
+                    <span v-else-if="res.commentSource === 'Instagram'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30 uppercase tracking-wider shrink-0">📷 Instagram</span>
                     <a :href="res.link" target="_blank" class="text-primary-light hover:underline font-medium text-sm truncate">
                       {{ res.title }}
                     </a>

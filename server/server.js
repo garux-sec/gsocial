@@ -35,6 +35,16 @@ function isFacebookUrl(url) {
   return url.includes("facebook.com") || url.includes("fb.com") || url.includes("fb.watch");
 }
 
+// Helper: Check if URL is a TikTok URL
+function isTikTokUrl(url) {
+  return url.includes("tiktok.com");
+}
+
+// Helper: Check if URL is an Instagram URL
+function isInstagramUrl(url) {
+  return url.includes("instagram.com") || url.includes("instagr.am");
+}
+
 // Helper: Resolve Google News RSS link to actual URL
 async function resolveGoogleNewsUrl(googleNewsUrl) {
   try {
@@ -109,9 +119,71 @@ async function fetchFacebookComments(postUrl, maxResults = 100) {
       const author = item.profileName || item.name || "User";
       const text = item.text || item.message || "";
       return `${author}: ${text}`;
-    }).filter(c => c.length > 10); // Filter out empty/tiny comments
+    }).filter(c => c.length > 10);
   } catch (error) {
     console.error(`Error fetching FB comments for ${postUrl}:`, error.message);
+    return [];
+  }
+}
+
+// Helper: Fetch TikTok Comments via Apify
+async function fetchTikTokComments(postUrl, maxResults = 100) {
+  try {
+    if (!process.env.APIFY_API_TOKEN) {
+      console.warn("APIFY_API_TOKEN is missing. Skipping TikTok comments.");
+      return [];
+    }
+
+    console.log(`🎵 Fetching TikTok comments for: ${postUrl}`);
+
+    const run = await apifyClient.actor("clockworks/tiktok-comments-scraper").call({
+      postURLs: [postUrl],
+      commentsPerPost: maxResults,
+    }, {
+      timeout: 120,
+    });
+
+    const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+    if (!items || items.length === 0) return [];
+
+    return items.map(item => {
+      const author = item.uniqueId || item.nickname || "User";
+      const text = item.text || item.comment || "";
+      return `${author}: ${text}`;
+    }).filter(c => c.length > 10);
+  } catch (error) {
+    console.error(`Error fetching TikTok comments for ${postUrl}:`, error.message);
+    return [];
+  }
+}
+
+// Helper: Fetch Instagram Comments via Apify
+async function fetchInstagramComments(postUrl, maxResults = 100) {
+  try {
+    if (!process.env.APIFY_API_TOKEN) {
+      console.warn("APIFY_API_TOKEN is missing. Skipping Instagram comments.");
+      return [];
+    }
+
+    console.log(`📷 Fetching Instagram comments for: ${postUrl}`);
+
+    const run = await apifyClient.actor("apify/instagram-comment-scraper").call({
+      directUrls: [postUrl],
+      resultsLimit: maxResults,
+    }, {
+      timeout: 120,
+    });
+
+    const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+    if (!items || items.length === 0) return [];
+
+    return items.map(item => {
+      const author = item.ownerUsername || item.username || "User";
+      const text = item.text || "";
+      return `${author}: ${text}`;
+    }).filter(c => c.length > 10);
+  } catch (error) {
+    console.error(`Error fetching IG comments for ${postUrl}:`, error.message);
     return [];
   }
 }
@@ -338,6 +410,24 @@ app.post("/api/analyze", async (req, res) => {
           if (fetchedComments && fetchedComments.length > 0) {
             commentsArray = fetchedComments;
             snippet += `\n\n[Real User Comments on Facebook]:\n- ` + commentsArray.join("\n- ");
+          }
+        }
+        // Try TikTok
+        else if (isTikTokUrl(realUrl)) {
+          commentSource = "TikTok";
+          const fetchedComments = await fetchTikTokComments(realUrl, 100);
+          if (fetchedComments && fetchedComments.length > 0) {
+            commentsArray = fetchedComments;
+            snippet += `\n\n[Real User Comments on TikTok]:\n- ` + commentsArray.join("\n- ");
+          }
+        }
+        // Try Instagram
+        else if (isInstagramUrl(realUrl)) {
+          commentSource = "Instagram";
+          const fetchedComments = await fetchInstagramComments(realUrl, 100);
+          if (fetchedComments && fetchedComments.length > 0) {
+            commentsArray = fetchedComments;
+            snippet += `\n\n[Real User Comments on Instagram]:\n- ` + commentsArray.join("\n- ");
           }
         }
         
