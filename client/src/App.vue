@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Doughnut } from 'vue-chartjs'
+import QrcodeVue from 'qrcode.vue'
 import {
   Chart as ChartJS,
   ArcElement,
@@ -375,28 +376,136 @@ const sentimentEmoji = computed(() => {
       <!-- STEP 2: AI Analysis Results -->
       <Transition name="fade">
         <div v-if="analysisResult && !loadingAnalysis" class="space-y-6">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-2xl font-bold text-white flex items-center gap-2">
-              <Sparkles class="w-6 h-6 text-primary-light" />
-              Analysis Report
-            </h2>
-            <button @click="analysisResult = null" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">
-              ← Back to Links
+          
+          <!-- Report Header -->
+          <div class="glass p-6 border-white/10 text-center relative overflow-hidden">
+            <div class="absolute -top-20 -left-20 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-20 -right-20 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-400 mb-1">Social Listening</h1>
+            <p class="text-slate-400 text-sm mb-3">{{ new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }) }}</p>
+            <p class="text-lg md:text-xl font-semibold text-white">ประเด็น: <span class="text-blue-400">{{ keyword || 'การวิเคราะห์' }}</span></p>
+            <button @click="analysisResult = null" class="absolute top-4 right-4 text-xs px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">
+              ← กลับไปหน้ารายการ
             </button>
           </div>
-          
-          <!-- Top row: Sentiment Chart + Summary -->
-          <div class="grid md:grid-cols-3 gap-6">
-            <!-- Donut Chart Card -->
-            <div class="glass p-6 md:col-span-1 flex flex-col items-center border-white/10 relative overflow-hidden">
-              <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
-              
-              <div class="flex items-center gap-2 mb-4 self-start">
-                <BarChart3 class="w-5 h-5 text-primary-light" />
-                <h2 class="font-semibold text-white text-lg">Sentiment</h2>
+
+          <!-- AI Summary Section -->
+          <div class="glass p-6 border-white/10">
+            <div class="flex items-center gap-2 mb-4">
+              <Sparkles class="w-5 h-5 text-blue-400" />
+              <h2 class="font-bold text-white text-lg">ภาพรวมสรุป</h2>
+            </div>
+            <div class="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/15 rounded-xl p-5 shadow-inner">
+              <p class="text-slate-200 text-base md:text-lg leading-relaxed font-light whitespace-pre-line text-center">
+                {{ analysisResult.summary }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Source Media Cards with QR Codes -->
+          <div class="glass p-6 border-white/10">
+            <div class="flex items-center gap-2 mb-5">
+              <ExternalLink class="w-5 h-5 text-blue-400" />
+              <h2 class="font-bold text-white text-lg">ตัวอย่างสื่อที่น่าสนใจ</h2>
+              <span class="ml-auto text-xs text-slate-500">{{ analysisResult.enrichedResults?.length || 0 }} แหล่งข้อมูล</span>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div v-for="(res, i) in (analysisResult.enrichedResults || [])" :key="i" 
+                   class="bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-xl border border-white/5 p-4 hover:border-blue-500/30 transition-all duration-300 group">
+                <!-- Platform Icon + Badge -->
+                <div class="flex items-center gap-2 mb-3">
+                  <img v-if="res.link?.includes('youtube.com') || res.link?.includes('youtu.be')" 
+                       src="https://www.google.com/s2/favicons?domain=youtube.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="YouTube">
+                  <img v-else-if="res.link?.includes('facebook.com')" 
+                       src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="Facebook">
+                  <img v-else-if="res.link?.includes('tiktok.com')" 
+                       src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="TikTok">
+                  <img v-else-if="res.link?.includes('instagram.com')" 
+                       src="https://www.google.com/s2/favicons?domain=instagram.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="Instagram">
+                  <img v-else 
+                       src="https://www.google.com/s2/favicons?domain=google.com&sz=64" 
+                       class="w-8 h-8 rounded-lg" alt="Web">
+                  
+                  <!-- Source Badge -->
+                  <span v-if="res.commentSource === 'YouTube'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase">YouTube</span>
+                  <span v-else-if="res.commentSource === 'Facebook'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">Facebook</span>
+                  <span v-else-if="res.commentSource === 'TikTok'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 uppercase">TikTok</span>
+                  <span v-else-if="res.commentSource === 'Instagram'" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30 uppercase">Instagram</span>
+                  
+                  <span v-if="res.comments?.length" class="ml-auto text-[10px] text-slate-500">{{ res.comments.length }} ความคิดเห็น</span>
+                </div>
+                
+                <!-- Title -->
+                <a :href="res.link" target="_blank" class="text-slate-200 text-sm font-medium leading-snug mb-3 block hover:text-blue-400 transition-colors line-clamp-2">
+                  {{ res.title }}
+                </a>
+                
+                <!-- QR Code + Link -->
+                <div class="flex items-end justify-between mt-auto pt-3 border-t border-white/5">
+                  <div class="flex-1 min-w-0 pr-3">
+                    <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">ลิงก์ต้นทาง</p>
+                    <a :href="res.link" target="_blank" class="text-blue-400 text-xs hover:underline truncate block">
+                      {{ res.link }}
+                    </a>
+                  </div>
+                  <div class="bg-white rounded-lg p-1.5 shadow-lg shrink-0 group-hover:scale-105 transition-transform">
+                    <QrcodeVue :value="res.link || ''" :size="64" level="M" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Public Opinion Section (เชิงบวก / เชิงลบ) -->
+          <div class="glass p-6 border-white/10">
+            <div class="text-center mb-5">
+              <h2 class="text-xl font-bold text-white">ความคิดเห็นของประชาชน</h2>
+            </div>
+            <div class="grid md:grid-cols-2 gap-6">
+              <!-- เชิงบวก (Positive) -->
+              <div class="flex flex-col" style="min-height: 250px;">
+                <div class="flex items-center justify-center gap-2 mb-3">
+                  <h3 class="text-lg font-bold text-positive">เชิงบวก</h3>
+                  <div class="w-6 h-6 rounded-full bg-positive flex items-center justify-center text-white text-sm font-bold">+</div>
+                  <span v-if="analysisResult.positiveFeedbackIsAI" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">🤖 AI</span>
+                  <span v-else class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-positive/20 text-positive border border-positive/30 uppercase">📊 Data</span>
+                </div>
+                <div class="bg-gradient-to-br from-positive/5 to-transparent border border-positive/10 rounded-xl p-5 flex-1 shadow-inner overflow-y-auto custom-scrollbar" style="max-height: 200px;">
+                  <p class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line text-center">
+                    {{ analysisResult.positiveFeedback }}
+                  </p>
+                </div>
               </div>
 
-              <div class="relative w-48 h-48 mb-5">
+              <!-- เชิงลบ (Negative) -->
+              <div class="flex flex-col" style="min-height: 250px;">
+                <div class="flex items-center justify-center gap-2 mb-3">
+                  <h3 class="text-lg font-bold text-negative">เชิงลบ</h3>
+                  <div class="w-6 h-6 rounded-full bg-negative flex items-center justify-center text-white text-sm font-bold">−</div>
+                  <span v-if="analysisResult.negativeFeedbackIsAI" class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">🤖 AI</span>
+                  <span v-else class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-negative/20 text-negative border border-negative/30 uppercase">📊 Data</span>
+                </div>
+                <div class="bg-gradient-to-br from-negative/5 to-transparent border border-negative/10 rounded-xl p-5 flex-1 shadow-inner overflow-y-auto custom-scrollbar" style="max-height: 200px;">
+                  <p class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line text-center">
+                    {{ analysisResult.negativeFeedback }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sentiment Overview (ภาพรวมความคิดเห็น) -->
+          <div class="glass p-6 border-white/10">
+            <div class="text-center mb-5">
+              <h2 class="text-xl font-bold text-white">ภาพรวมความคิดเห็น</h2>
+            </div>
+            <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+              <!-- Donut Chart -->
+              <div class="relative w-48 h-48">
                 <Doughnut :data="chartData" :options="chartOptions" />
                 <div class="absolute inset-0 flex flex-col items-center justify-center">
                   <span class="text-4xl drop-shadow-md">{{ sentimentEmoji }}</span>
@@ -406,81 +515,32 @@ const sentimentEmoji = computed(() => {
                 </div>
               </div>
 
-              <!-- Legend -->
-              <div class="flex flex-wrap justify-center w-full gap-4 text-sm mt-auto pt-4 border-t border-white/10">
-                <div class="flex flex-col items-center gap-1">
-                  <span class="w-3 h-3 rounded-full bg-positive shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
-                  <span class="font-bold text-white">{{ analysisResult.sentiment.positive }}%</span>
+              <!-- Thai Legend -->
+              <div class="flex flex-col gap-4">
+                <div class="flex items-center gap-3">
+                  <span class="w-5 h-5 rounded bg-positive shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+                  <span class="text-white font-semibold text-base">เชิงบวก</span>
+                  <span class="text-positive font-bold text-lg ml-2">{{ analysisResult.sentiment.positive }}%</span>
                 </div>
-                <div class="flex flex-col items-center gap-1">
-                  <span class="w-3 h-3 rounded-full bg-neutral-accent shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span>
-                  <span class="font-bold text-white">{{ analysisResult.sentiment.neutral }}%</span>
+                <div class="flex items-center gap-3">
+                  <span class="w-5 h-5 rounded bg-neutral-accent shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span>
+                  <span class="text-white font-semibold text-base">ทั่วไป</span>
+                  <span class="text-neutral-accent font-bold text-lg ml-2">{{ analysisResult.sentiment.neutral }}%</span>
                 </div>
-                <div class="flex flex-col items-center gap-1">
-                  <span class="w-3 h-3 rounded-full bg-negative shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
-                  <span class="font-bold text-white">{{ analysisResult.sentiment.negative }}%</span>
+                <div class="flex items-center gap-3">
+                  <span class="w-5 h-5 rounded bg-negative shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
+                  <span class="text-white font-semibold text-base">เชิงลบ</span>
+                  <span class="text-negative font-bold text-lg ml-2">{{ analysisResult.sentiment.negative }}%</span>
                 </div>
-              </div>
-            </div>
-
-            <!-- Summary Card -->
-            <div class="glass p-6 md:col-span-2 flex flex-col border-white/10">
-              <div class="flex items-center gap-2 mb-4">
-                <Sparkles class="w-5 h-5 text-primary-light" />
-                <h2 class="font-semibold text-white text-lg">AI Insight Summary</h2>
-              </div>
-              <div class="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl p-5 flex-1 shadow-inner">
-                <p class="text-slate-200 text-[15px] sm:text-base md:text-lg leading-relaxed font-light whitespace-pre-line">
-                  {{ analysisResult.summary }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-        <!-- Feedback Row -->
-          <div class="grid md:grid-cols-2 gap-6">
-            <!-- Positive Feedback -->
-            <div class="glass p-6 border-white/10 flex flex-col" style="min-height: 280px;">
-              <div class="flex items-center gap-2 mb-4">
-                <div class="p-1.5 rounded-lg bg-positive/10 border border-positive/20">
-                  <ThumbsUp class="w-5 h-5 text-positive" />
-                </div>
-                <h2 class="font-semibold text-white text-lg">Positive Feedback</h2>
-                <span v-if="analysisResult.positiveFeedbackIsAI" class="ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">🤖 AI Generated</span>
-                <span v-else class="ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-positive/20 text-positive border border-positive/30 uppercase tracking-wider">📊 From Data</span>
-                <TrendingUp class="w-4 h-4 text-positive ml-auto opacity-70" />
-              </div>
-              <div class="bg-gradient-to-br from-positive/5 to-transparent border border-positive/10 rounded-xl p-5 flex-1 shadow-inner overflow-y-auto custom-scrollbar" style="max-height: 200px;">
-                <p class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line">
-                  {{ analysisResult.positiveFeedback }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Negative / Concern Feedback -->
-            <div class="glass p-6 border-white/10 flex flex-col" style="min-height: 280px;">
-              <div class="flex items-center gap-2 mb-4">
-                <div class="p-1.5 rounded-lg bg-negative/10 border border-negative/20">
-                  <ThumbsDown class="w-5 h-5 text-negative" />
-                </div>
-                <h2 class="font-semibold text-white text-lg">Concerns & Issues</h2>
-                <span v-if="analysisResult.negativeFeedbackIsAI" class="ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">🤖 AI Generated</span>
-                <span v-else class="ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-negative/20 text-negative border border-negative/30 uppercase tracking-wider">📊 From Data</span>
-                <TrendingDown class="w-4 h-4 text-negative ml-auto opacity-70" />
-              </div>
-              <div class="bg-gradient-to-br from-negative/5 to-transparent border border-negative/10 rounded-xl p-5 flex-1 shadow-inner overflow-y-auto custom-scrollbar" style="max-height: 200px;">
-                <p class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line">
-                  {{ analysisResult.negativeFeedback }}
-                </p>
               </div>
             </div>
           </div>
 
           <!-- Raw Comments Section -->
-          <div v-if="analysisResult.enrichedResults?.some(r => r.comments && r.comments.length > 0)" class="glass p-6 border-white/10 mt-6">
+          <div v-if="analysisResult.enrichedResults?.some(r => r.comments && r.comments.length > 0)" class="glass p-6 border-white/10">
             <div class="flex items-center gap-2 mb-4">
-              <List class="w-5 h-5 text-primary-light" />
-              <h2 class="font-semibold text-white text-lg">Raw Comments Extracted</h2>
+              <List class="w-5 h-5 text-blue-400" />
+              <h2 class="font-bold text-white text-lg">ความคิดเห็นจากแหล่งข้อมูล</h2>
             </div>
             
             <div class="space-y-6">
@@ -491,10 +551,10 @@ const sentimentEmoji = computed(() => {
                     <span v-else-if="res.commentSource === 'Facebook'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-wider shrink-0">📘 Facebook</span>
                     <span v-else-if="res.commentSource === 'TikTok'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 uppercase tracking-wider shrink-0">🎵 TikTok</span>
                     <span v-else-if="res.commentSource === 'Instagram'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30 uppercase tracking-wider shrink-0">📷 Instagram</span>
-                    <a :href="res.link" target="_blank" class="text-primary-light hover:underline font-medium text-sm truncate">
+                    <a :href="res.link" target="_blank" class="text-blue-400 hover:underline font-medium text-sm truncate">
                       {{ res.title }}
                     </a>
-                    <span class="ml-auto text-[10px] text-slate-500 shrink-0">{{ res.comments.length }} comments</span>
+                    <span class="ml-auto text-[10px] text-slate-500 shrink-0">{{ res.comments.length }} ความคิดเห็น</span>
                   </div>
                   <div class="max-h-80 overflow-y-auto custom-scrollbar pr-2 space-y-2">
                     <div v-for="(comment, cid) in res.comments" :key="cid" class="glass-alt p-3 rounded-lg text-sm text-slate-300">
