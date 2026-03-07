@@ -139,9 +139,7 @@ async function analyzeWithGemini(snippets) {
   // Using gemini-2.5-flash-lite based on API key permissions
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
-  const combinedText = snippets
-    .map((s, i) => `[${i + 1}] Title: ${s.title}\nSnippet: ${s.snippet}\nURL: ${s.link}`)
-    .join("\n\n");
+  const combinedText = snippets.join("\n\n---\n\n");
 
   const prompt = `
   You are an expert Social Listening Analyst. Analyze the following news/social media snippets and return the result strictly as a valid JSON object.
@@ -242,19 +240,23 @@ app.post("/api/analyze", async (req, res) => {
     const enrichedResults = await Promise.all(
       results.map(async (item) => {
         let snippet = item.snippet;
+        let commentsArray = [];
         const videoId = extractYouTubeVideoId(item.link);
         
         if (videoId) {
-          const comments = await fetchYouTubeComments(videoId, 15); // Get max 15 comments per video
-          if (comments.length > 0) {
-            snippet += `\n\n[Real User Comments on YouTube]:\n- ` + comments.join("\n- ");
+          const fetchedComments = await fetchYouTubeComments(videoId, 100); // Fetch up to 100 comments
+          if (fetchedComments && fetchedComments.length > 0) {
+            commentsArray = fetchedComments;
+            // Append top comments to the snippet for Gemini to read
+            snippet += `\n\n[Real User Comments on YouTube]:\n- ` + commentsArray.join("\n- ");
           }
         }
         
         return {
           title: item.title,
           snippet: snippet,
-          link: item.link
+          link: item.link,
+          comments: commentsArray // Attach comments for the UI to display
         };
       })
     );
@@ -264,7 +266,12 @@ app.post("/api/analyze", async (req, res) => {
     console.log(`Analyzing ${mapText.length} items with Gemini...`);
 
     const analysis = await analyzeWithGemini(mapText);
-    res.json(analysis);
+    
+    // Send analysis along with the enriched results so UI can show the comments
+    res.json({
+      ...analysis,
+      enrichedResults
+    });
   } catch (error) {
     console.error("Analysis Error:", error);
     res.status(500).json({ error: "Failed to analyze data" });

@@ -437,7 +437,7 @@ const sentimentEmoji = computed(() => {
             </div>
           </div>
 
-          <!-- Feedback Row -->
+        <!-- Feedback Row -->
           <div class="grid md:grid-cols-2 gap-6">
             <!-- Positive Feedback -->
             <div class="glass p-6 border-white/10">
@@ -485,6 +485,29 @@ const sentimentEmoji = computed(() => {
                   No negative feedback found.
                 </li>
               </ul>
+            </div>
+          </div>
+
+          <!-- Raw Comments Section -->
+          <div v-if="analysisResult.enrichedResults?.some(r => r.comments && r.comments.length > 0)" class="glass p-6 border-white/10 mt-6">
+            <div class="flex items-center gap-2 mb-4">
+              <List class="w-5 h-5 text-primary-light" />
+              <h2 class="font-semibold text-white text-lg">Raw Comments Extracted</h2>
+            </div>
+            
+            <div class="space-y-6">
+              <div v-for="(res, i) in analysisResult.enrichedResults" :key="i">
+                <div v-if="res.comments && res.comments.length > 0" class="bg-black/20 rounded-xl p-4 border border-white/5">
+                  <a :href="res.link" target="_blank" class="text-primary-light hover:underline font-medium text-sm mb-3 block">
+                    {{ res.title }}
+                  </a>
+                  <div class="max-h-60 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                    <div v-for="(comment, cid) in res.comments" :key="cid" class="glass-alt p-3 rounded-lg text-sm text-slate-300">
+                      {{ comment }}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
