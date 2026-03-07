@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { google } = require("googleapis");
-const axios = require("axios");
+const puppeteer = require("puppeteer");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,22 +29,18 @@ async function resolveGoogleNewsUrl(googleNewsUrl) {
   try {
     if (!googleNewsUrl.includes("news.google.com")) return googleNewsUrl;
     
-    // The true URL is base64 encoded within the redirect HTML page
-    const response = await axios.get(googleNewsUrl);
-    const html = response.data;
+    // Launch headless browser to follow JS redirects
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
     
-    // Look for the base64 string inside the c-wiz tag's data-a-id attribute
-    const match = html.match(/data-n-a-id="([^"]+)"/);
-    if (match && match[1]) {
-      const b64 = match[1];
-      const decodedStr = Buffer.from(b64, "base64").toString("utf8");
-      // The decoded string contains the URL preceded by some binary junk, e.g., https://youtube.com/...
-      const urlMatch = decodedStr.match(/https?:\/\/[^\s\x00-\x1F\x7F]+/);
-      if (urlMatch) return urlMatch[0];
-    }
-    return googleNewsUrl;
+    // Set a timeout to prevent hanging on slow sites
+    await page.goto(googleNewsUrl, { waitUntil: "networkidle2", timeout: 15000 });
+    const resolvedUrl = page.url();
+    
+    await browser.close();
+    return resolvedUrl;
   } catch (error) {
-    console.error("Failed to resolve Google News URL:", error.message);
+    console.error("Failed to resolve Google News URL via Puppeteer:", error.message);
     return googleNewsUrl;
   }
 }
