@@ -44,6 +44,33 @@ async function performSearch(keyword, socialOnly = true) {
     else if (pubLower.includes("youtube") || titleLower.includes("youtube")) domain = "youtube.com";
     else if (pubLower.includes("instagram") || titleLower.includes("instagram")) domain = "instagram.com";
 
+    // Extract page name (author/channel) if it's social media
+    let pageName = publisher;
+    if (["facebook.com", "x.com", "tiktok.com", "youtube.com", "instagram.com"].includes(domain)) {
+      if (domain === "x.com") {
+        const m = r.title.match(/^(.*?) on X:/);
+        if (m) pageName = m[1];
+        else pageName = "X (Twitter)";
+      } else if (domain === "youtube.com") {
+        const parts = r.title.replace(/ - YouTube$/i, "").split(/ \| /);
+        if (parts.length > 1) {
+           pageName = (parts.length === 3 ? parts[1] : parts[parts.length - 1]).trim();
+        } else {
+           pageName = "YouTube";
+        }
+      } else {
+        const parts = r.title.split(/ \. | - | \: | \| /);
+        // Page name is usually the very first part of the title on Facebook/IG posts
+        if (parts.length > 1 && parts[0].length < 60) {
+           pageName = parts[0].trim();
+        } else {
+           pageName = domain === "facebook.com" ? "Facebook" : 
+                      domain === "instagram.com" ? "Instagram" :
+                      domain === "tiktok.com" ? "TikTok" : publisher;
+        }
+      }
+    }
+
     // Clean up snippet
     let snippet = r.contentSnippet || r.content || r.title;
     // Remove the publisher part from snippet if it exists at the end
@@ -54,6 +81,7 @@ async function performSearch(keyword, socialOnly = true) {
       snippet: snippet,
       link: r.link,
       publisher: publisher,
+      pageName: pageName,
       favicon: `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
       pubDate: r.isoDate || r.pubDate || new Date().toISOString(),
       timestamp: new Date(r.isoDate || r.pubDate || new Date()).getTime(),
@@ -68,45 +96,54 @@ async function performSearch(keyword, socialOnly = true) {
 // ── Gemini Analysis ──────────────────────────────────────────────────
 async function analyzeWithGemini(snippets) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  // Using the latest gemini-2.0-flash-lite model
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
   const combinedText = snippets
     .map((s, i) => `[${i + 1}] Title: ${s.title}\nSnippet: ${s.snippet}\nURL: ${s.link}`)
     .join("\n\n");
 
-  const prompt = `You are a social listening analyst. Analyze the following search results about a topic and return ONLY a valid JSON object (no markdown, no code fences).
+  const prompt = `
+  You are an expert Social Listening Analyst. Analyze the following news/social media snippets and return the result strictly as a valid JSON object.
+  Do NOT use markdown code blocks like \`\`\`json. Just output the raw JSON directly.
 
-The JSON must have this exact structure:
-{
-  "sentiment": {
-    "positive": <number 0-100>,
-    "neutral": <number 0-100>,
-    "negative": <number 0-100>
-  },
-  "summary": "<string: 2-3 sentence summary of key discussion points>",
-  "positiveFeedback": ["<point 1>", "<point 2>", ...],
-  "negativeFeedback": ["<point 1>", "<point 2>", ...],
-  "sources": [
-    { "title": "<string>", "link": "<url>" }
-  ]
-}
+  Focus on key themes, public sentiment, and overall narrative.
+  
+  Snippets:
+  ${combinedText}
 
-Rules:
-- sentiment values must sum to 100.
-- positiveFeedback should list 3-5 positive things people are saying.
-- negativeFeedback should list 3-5 concerns or negative things people are saying.
-- sources should include the top 3-5 most relevant links from the data.
+  Return your analysis exactly in this JSON format:
+  {
+    "summary": "A 2-4 sentence executive summary of the overall discussion and key themes.",
+    "positiveFeedback": ["Point 1", "Point 2", "Point 3"],
+    "negativeFeedback": ["Issue 1", "Issue 2", "Issue 3"],
+    "sentiment": {
+      "positive": 20,
+      "neutral": 50,
+      "negative": 30
+    }
+  }
 
-Here are the search results:
-
-${combinedText}`;
+  IMPORTANT: 
+  - The positive, neutral, and negative values must sum to 100.
+  - Return the response ONLY as raw JSON text. No markdown formatting.
+  - If a feedback category has no points, return an empty array [].
+  - Use Thai language for summary and feedback points.
+  `;
 
   const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
+  const text = result.response.text();
 
-  // Strip markdown code fences if Gemini wraps the response
-  const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
-  return JSON.parse(cleaned);
+  // Strip possible markdown formatting that the AI might accidentally include
+  const cleanJsonText = text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+
+  try {
+    const parsed = JSON.parse(cleanJsonText);
+    return parsed;
+  } catch (error) {
+    console.error("Failed to parse Gemini JSON output:", cleanJsonText);
+    throw new Error("Failed to parse the AI analysis result.");
+  }
 }
 
 // ── API Routes ───────────────────────────────────────────────────────
