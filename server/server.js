@@ -96,8 +96,8 @@ async function performSearch(keyword, socialOnly = true) {
 // ── Gemini Analysis ──────────────────────────────────────────────────
 async function analyzeWithGemini(snippets) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  // Using the latest gemini-2.0-flash-lite model
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+  // Using gemini-2.5-flash-lite based on API key permissions
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
   const combinedText = snippets
     .map((s, i) => `[${i + 1}] Title: ${s.title}\nSnippet: ${s.snippet}\nURL: ${s.link}`)
