@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { google } = require("googleapis");
+const axios = require("axios");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,6 +22,31 @@ function extractYouTubeVideoId(url) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
   return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// Helper: Resolve Google News RSS link to actual URL
+async function resolveGoogleNewsUrl(googleNewsUrl) {
+  try {
+    if (!googleNewsUrl.includes("news.google.com")) return googleNewsUrl;
+    
+    // The true URL is base64 encoded within the redirect HTML page
+    const response = await axios.get(googleNewsUrl);
+    const html = response.data;
+    
+    // Look for the base64 string inside the c-wiz tag's data-a-id attribute
+    const match = html.match(/data-n-a-id="([^"]+)"/);
+    if (match && match[1]) {
+      const b64 = match[1];
+      const decodedStr = Buffer.from(b64, "base64").toString("utf8");
+      // The decoded string contains the URL preceded by some binary junk, e.g., https://youtube.com/...
+      const urlMatch = decodedStr.match(/https?:\/\/[^\s\x00-\x1F\x7F]+/);
+      if (urlMatch) return urlMatch[0];
+    }
+    return googleNewsUrl;
+  } catch (error) {
+    console.error("Failed to resolve Google News URL:", error.message);
+    return googleNewsUrl;
+  }
 }
 
 // Helper: Fetch YouTube Comments
@@ -50,7 +76,11 @@ async function fetchYouTubeComments(videoId, maxResults = 20) {
 }
 
 const Parser = require("rss-parser");
-const parser = new Parser();
+const parser = new Parser({
+  customFields: {
+    item: ['content', 'contentSnippet', 'guid', 'isoDate'],
+  }
+});
 
 // ── Search ─────────────────────────────────────────────────────────
 async function performSearch(keyword, socialOnly = true) {
@@ -241,7 +271,10 @@ app.post("/api/analyze", async (req, res) => {
       results.map(async (item) => {
         let snippet = item.snippet;
         let commentsArray = [];
-        const videoId = extractYouTubeVideoId(item.link);
+        
+        // Resolve the true URL first if it's a proxy link
+        const realUrl = await resolveGoogleNewsUrl(item.link);
+        const videoId = extractYouTubeVideoId(realUrl);
         
         if (videoId) {
           const fetchedComments = await fetchYouTubeComments(videoId, 100); // Fetch up to 100 comments
@@ -255,7 +288,7 @@ app.post("/api/analyze", async (req, res) => {
         return {
           title: item.title,
           snippet: snippet,
-          link: item.link,
+          link: realUrl, // Return the direct link instead of the proxy
           comments: commentsArray // Attach comments for the UI to display
         };
       })
