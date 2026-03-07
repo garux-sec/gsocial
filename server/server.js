@@ -2,12 +2,52 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { google } = require("googleapis");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Initialize YouTube API client
+const youtube = google.youtube({
+  version: "v3",
+  auth: process.env.GOOGLE_API_KEY, // Note: User must have a valid API Key in .env
+});
+
+// Helper: Extract YouTube Video ID from URL
+function extractYouTubeVideoId(url) {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// Helper: Fetch YouTube Comments
+async function fetchYouTubeComments(videoId, maxResults = 20) {
+  try {
+    if (!process.env.GOOGLE_API_KEY) {
+      console.warn("GOOGLE_API_KEY is missing. Skipping YouTube comments.");
+      return [];
+    }
+    const response = await youtube.commentThreads.list({
+      part: ["snippet"],
+      videoId: videoId,
+      maxResults: maxResults,
+      order: "relevance",
+    });
+
+    if (!response.data.items) return [];
+
+    return response.data.items.map(item => {
+      const comment = item.snippet.topLevelComment.snippet;
+      return `User: ${comment.textDisplay}`;
+    });
+  } catch (error) {
+    console.error(`Error fetching YT comments for video ${videoId}:`, error.message);
+    return []; // Return empty array if comments are disabled or error occurs
+  }
+}
 
 const Parser = require("rss-parser");
 const parser = new Parser();
@@ -195,22 +235,39 @@ app.post("/api/analyze", async (req, res) => {
     const { keyword, searchType, results } = req.body;
     
     if (!results || results.length === 0) {
-      return res.status(400).json({ error: "No search results provided to analyze." });
+      return res.status(400).json({ error: "No results provided for analysis" });
     }
 
-    console.log(`🧠  Analyzing ${results.length} results for: "${keyword}"…`);
-    
-    // Analyze with Gemini
-    const analysis = await analyzeWithGemini(results);
+    // Enrich YouTube results with fetched comments
+    const enrichedResults = await Promise.all(
+      results.map(async (item) => {
+        let snippet = item.snippet;
+        const videoId = extractYouTubeVideoId(item.link);
+        
+        if (videoId) {
+          const comments = await fetchYouTubeComments(videoId, 15); // Get max 15 comments per video
+          if (comments.length > 0) {
+            snippet += `\n\n[Real User Comments on YouTube]:\n- ` + comments.join("\n- ");
+          }
+        }
+        
+        return {
+          title: item.title,
+          snippet: snippet,
+          link: item.link
+        };
+      })
+    );
 
-    return res.json({
-      keyword,
-      searchType,
-      ...analysis,
-    });
-  } catch (err) {
-    console.error("❌ Analysis Error:", err.message);
-    return res.status(500).json({ error: err.message });
+    const mapText = enrichedResults.map((s, i) => `[${i + 1}] Title: ${s.title}\nContent/Comments: ${s.snippet}\nURL: ${s.link}`);
+    
+    console.log(`Analyzing ${mapText.length} items with Gemini...`);
+
+    const analysis = await analyzeWithGemini(mapText);
+    res.json(analysis);
+  } catch (error) {
+    console.error("Analysis Error:", error);
+    res.status(500).json({ error: "Failed to analyze data" });
   }
 });
 
