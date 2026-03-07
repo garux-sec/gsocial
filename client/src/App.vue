@@ -440,40 +440,38 @@ const sentimentEmoji = computed(() => {
         <!-- Feedback Row -->
           <div class="grid md:grid-cols-2 gap-6">
             <!-- Positive Feedback -->
-            <div class="glass p-6 border-white/10">
+            <div class="glass p-6 border-white/10 flex flex-col" style="min-height: 280px;">
               <div class="flex items-center gap-2 mb-4">
                 <div class="p-1.5 rounded-lg bg-positive/10 border border-positive/20">
                   <ThumbsUp class="w-5 h-5 text-positive" />
                 </div>
                 <h2 class="font-semibold text-white text-lg">Positive Feedback</h2>
+                <span v-if="analysisResult.positiveFeedbackIsAI" class="ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">🤖 AI Generated</span>
+                <span v-else class="ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-positive/20 text-positive border border-positive/30 uppercase tracking-wider">📊 From Data</span>
                 <TrendingUp class="w-4 h-4 text-positive ml-auto opacity-70" />
               </div>
-              <div class="bg-gradient-to-br from-positive/5 to-transparent border border-positive/10 rounded-xl p-5 flex-1 shadow-inner h-full">
-                <p v-if="analysisResult.positiveFeedback" class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line">
+              <div class="bg-gradient-to-br from-positive/5 to-transparent border border-positive/10 rounded-xl p-5 flex-1 shadow-inner overflow-y-auto custom-scrollbar" style="max-height: 200px;">
+                <p class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line">
                   {{ analysisResult.positiveFeedback }}
                 </p>
-                <div v-else class="text-slate-500 text-sm italic py-4 text-center">
-                  No positive feedback found.
-                </div>
               </div>
             </div>
 
             <!-- Negative / Concern Feedback -->
-            <div class="glass p-6 border-white/10">
+            <div class="glass p-6 border-white/10 flex flex-col" style="min-height: 280px;">
               <div class="flex items-center gap-2 mb-4">
                 <div class="p-1.5 rounded-lg bg-negative/10 border border-negative/20">
                   <ThumbsDown class="w-5 h-5 text-negative" />
                 </div>
                 <h2 class="font-semibold text-white text-lg">Concerns & Issues</h2>
+                <span v-if="analysisResult.negativeFeedbackIsAI" class="ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">🤖 AI Generated</span>
+                <span v-else class="ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full bg-negative/20 text-negative border border-negative/30 uppercase tracking-wider">📊 From Data</span>
                 <TrendingDown class="w-4 h-4 text-negative ml-auto opacity-70" />
               </div>
-              <div class="bg-gradient-to-br from-negative/5 to-transparent border border-negative/10 rounded-xl p-5 flex-1 shadow-inner h-full">
-                <p v-if="analysisResult.negativeFeedback" class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line">
+              <div class="bg-gradient-to-br from-negative/5 to-transparent border border-negative/10 rounded-xl p-5 flex-1 shadow-inner overflow-y-auto custom-scrollbar" style="max-height: 200px;">
+                <p class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line">
                   {{ analysisResult.negativeFeedback }}
                 </p>
-                <div v-else class="text-slate-500 text-sm italic py-4 text-center">
-                  No negative feedback found.
-                </div>
               </div>
             </div>
           </div>
