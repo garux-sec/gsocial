@@ -4,6 +4,7 @@ const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { google } = require("googleapis");
 const puppeteer = require("puppeteer");
+const { ApifyClient } = require("apify-client");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,7 +15,12 @@ app.use(express.json());
 // Initialize YouTube API client
 const youtube = google.youtube({
   version: "v3",
-  auth: process.env.GOOGLE_API_KEY, // Note: User must have a valid API Key in .env
+  auth: process.env.GOOGLE_API_KEY,
+});
+
+// Initialize Apify client
+const apifyClient = new ApifyClient({
+  token: process.env.APIFY_API_TOKEN,
 });
 
 // Helper: Extract YouTube Video ID from URL
@@ -22,6 +28,11 @@ function extractYouTubeVideoId(url) {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
   return (match && match[2].length === 11) ? match[2] : null;
+}
+
+// Helper: Check if URL is a Facebook URL
+function isFacebookUrl(url) {
+  return url.includes("facebook.com") || url.includes("fb.com") || url.includes("fb.watch");
 }
 
 // Helper: Resolve Google News RSS link to actual URL
@@ -67,7 +78,41 @@ async function fetchYouTubeComments(videoId, maxResults = 20) {
     });
   } catch (error) {
     console.error(`Error fetching YT comments for video ${videoId}:`, error.message);
-    return []; // Return empty array if comments are disabled or error occurs
+    return [];
+  }
+}
+
+// Helper: Fetch Facebook Comments via Apify
+async function fetchFacebookComments(postUrl, maxResults = 100) {
+  try {
+    if (!process.env.APIFY_API_TOKEN) {
+      console.warn("APIFY_API_TOKEN is missing. Skipping Facebook comments.");
+      return [];
+    }
+
+    console.log(`📘 Fetching Facebook comments for: ${postUrl}`);
+
+    // Run the Facebook Comments Scraper actor
+    const run = await apifyClient.actor("apify/facebook-comments-scraper").call({
+      startUrls: [{ url: postUrl }],
+      resultsLimit: maxResults,
+    }, {
+      timeout: 120, // 2 minute timeout
+    });
+
+    // Fetch results from the run's dataset
+    const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+
+    if (!items || items.length === 0) return [];
+
+    return items.map(item => {
+      const author = item.profileName || item.name || "User";
+      const text = item.text || item.message || "";
+      return `${author}: ${text}`;
+    }).filter(c => c.length > 10); // Filter out empty/tiny comments
+  } catch (error) {
+    console.error(`Error fetching FB comments for ${postUrl}:`, error.message);
+    return [];
   }
 }
 
@@ -266,30 +311,42 @@ app.post("/api/analyze", async (req, res) => {
       return res.status(400).json({ error: "No results provided for analysis" });
     }
 
-    // Enrich YouTube results with fetched comments
+    // Enrich results with fetched comments (YouTube + Facebook)
     const enrichedResults = await Promise.all(
       results.map(async (item) => {
         let snippet = item.snippet;
         let commentsArray = [];
+        let commentSource = null;
         
         // Resolve the true URL first if it's a proxy link
         const realUrl = await resolveGoogleNewsUrl(item.link);
-        const videoId = extractYouTubeVideoId(realUrl);
         
+        // Try YouTube first
+        const videoId = extractYouTubeVideoId(realUrl);
         if (videoId) {
-          const fetchedComments = await fetchYouTubeComments(videoId, 100); // Fetch up to 100 comments
+          commentSource = "YouTube";
+          const fetchedComments = await fetchYouTubeComments(videoId, 100);
           if (fetchedComments && fetchedComments.length > 0) {
             commentsArray = fetchedComments;
-            // Append top comments to the snippet for Gemini to read
             snippet += `\n\n[Real User Comments on YouTube]:\n- ` + commentsArray.join("\n- ");
+          }
+        }
+        // Try Facebook
+        else if (isFacebookUrl(realUrl)) {
+          commentSource = "Facebook";
+          const fetchedComments = await fetchFacebookComments(realUrl, 100);
+          if (fetchedComments && fetchedComments.length > 0) {
+            commentsArray = fetchedComments;
+            snippet += `\n\n[Real User Comments on Facebook]:\n- ` + commentsArray.join("\n- ");
           }
         }
         
         return {
           title: item.title,
           snippet: snippet,
-          link: realUrl, // Return the direct link instead of the proxy
-          comments: commentsArray // Attach comments for the UI to display
+          link: realUrl,
+          comments: commentsArray,
+          commentSource: commentSource
         };
       })
     );

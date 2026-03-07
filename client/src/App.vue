@@ -486,10 +486,15 @@ const sentimentEmoji = computed(() => {
             <div class="space-y-6">
               <div v-for="(res, i) in analysisResult.enrichedResults" :key="i">
                 <div v-if="res.comments && res.comments.length > 0" class="bg-black/20 rounded-xl p-4 border border-white/5">
-                  <a :href="res.link" target="_blank" class="text-primary-light hover:underline font-medium text-sm mb-3 block">
-                    {{ res.title }}
-                  </a>
-                  <div class="max-h-60 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                  <div class="flex items-center gap-2 mb-3">
+                    <span v-if="res.commentSource === 'YouTube'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-wider">▶ YouTube</span>
+                    <span v-else-if="res.commentSource === 'Facebook'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-wider">📘 Facebook</span>
+                    <a :href="res.link" target="_blank" class="text-primary-light hover:underline font-medium text-sm truncate">
+                      {{ res.title }}
+                    </a>
+                    <span class="ml-auto text-[10px] text-slate-500 shrink-0">{{ res.comments.length }} comments</span>
+                  </div>
+                  <div class="max-h-80 overflow-y-auto custom-scrollbar pr-2 space-y-2">
                     <div v-for="(comment, cid) in res.comments" :key="cid" class="glass-alt p-3 rounded-lg text-sm text-slate-300">
                       {{ comment }}
                     </div>
