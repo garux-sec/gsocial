@@ -448,19 +448,14 @@ const sentimentEmoji = computed(() => {
                 <h2 class="font-semibold text-white text-lg">Positive Feedback</h2>
                 <TrendingUp class="w-4 h-4 text-positive ml-auto opacity-70" />
               </div>
-              <ul class="space-y-3">
-                <li
-                  v-for="(item, i) in analysisResult.positiveFeedback"
-                  :key="i"
-                  class="flex items-start gap-3 glass-alt p-3 transition-all duration-200 hover:bg-positive/5 hover:border-positive/30 rounded-xl"
-                >
-                  <span class="pulse-dot bg-positive mt-1.5 shrink-0 shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
-                  <span class="text-slate-300 text-sm leading-relaxed">{{ item }}</span>
-                </li>
-                <li v-if="!analysisResult.positiveFeedback?.length" class="text-slate-500 text-sm italic py-4 text-center glass-alt rounded-xl">
+              <div class="bg-gradient-to-br from-positive/5 to-transparent border border-positive/10 rounded-xl p-5 flex-1 shadow-inner h-full">
+                <p v-if="analysisResult.positiveFeedback" class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line">
+                  {{ analysisResult.positiveFeedback }}
+                </p>
+                <div v-else class="text-slate-500 text-sm italic py-4 text-center">
                   No positive feedback found.
-                </li>
-              </ul>
+                </div>
+              </div>
             </div>
 
             <!-- Negative / Concern Feedback -->
@@ -472,19 +467,14 @@ const sentimentEmoji = computed(() => {
                 <h2 class="font-semibold text-white text-lg">Concerns & Issues</h2>
                 <TrendingDown class="w-4 h-4 text-negative ml-auto opacity-70" />
               </div>
-              <ul class="space-y-3">
-                <li
-                  v-for="(item, i) in analysisResult.negativeFeedback"
-                  :key="i"
-                  class="flex items-start gap-3 glass-alt p-3 transition-all duration-200 hover:bg-negative/5 hover:border-negative/30 rounded-xl"
-                >
-                  <span class="pulse-dot bg-negative mt-1.5 shrink-0 shadow-[0_0_5px_rgba(239,68,68,0.5)]"></span>
-                  <span class="text-slate-300 text-sm leading-relaxed">{{ item }}</span>
-                </li>
-                <li v-if="!analysisResult.negativeFeedback?.length" class="text-slate-500 text-sm italic py-4 text-center glass-alt rounded-xl">
+              <div class="bg-gradient-to-br from-negative/5 to-transparent border border-negative/10 rounded-xl p-5 flex-1 shadow-inner h-full">
+                <p v-if="analysisResult.negativeFeedback" class="text-slate-200 text-sm md:text-base leading-relaxed font-light whitespace-pre-line">
+                  {{ analysisResult.negativeFeedback }}
+                </p>
+                <div v-else class="text-slate-500 text-sm italic py-4 text-center">
                   No negative feedback found.
-                </li>
-              </ul>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -179,8 +179,8 @@ async function analyzeWithGemini(snippets) {
   Return your analysis exactly in this JSON format:
   {
     "summary": "A 2-4 sentence executive summary of the overall discussion and key themes.",
-    "positiveFeedback": ["Point 1", "Point 2", "Point 3"],
-    "negativeFeedback": ["Issue 1", "Issue 2", "Issue 3"],
+    "positiveFeedback": "A paragraph summarizing the overall positive feedback and sentiments.",
+    "negativeFeedback": "A paragraph summarizing the overall negative feedback, concerns, and issues.",
     "sentiment": {
       "positive": 20,
       "neutral": 50,
@@ -191,7 +191,7 @@ async function analyzeWithGemini(snippets) {
   IMPORTANT: 
   - The positive, neutral, and negative values must sum to 100.
   - Return the response ONLY as raw JSON text. No markdown formatting.
-  - If a feedback category has no points, return an empty array [].
+  - If there is no specific positive or negative feedback, return an empty string "".
   - Use Thai language for summary and feedback points.
   `;
 
