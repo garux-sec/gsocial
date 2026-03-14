@@ -3,7 +3,6 @@ const express = require("express");
 const cors = require("cors");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { google } = require("googleapis");
-const puppeteer = require("puppeteer");
 const { ApifyClient } = require("apify-client");
 const path = require("path");
 
