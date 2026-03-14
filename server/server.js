@@ -108,6 +108,7 @@ async function fetchFacebookComments(postUrl, maxResults = 100) {
       startUrls: [{ url: postUrl }],
       resultsLimit: maxResults,
     }, {
+      memoryMbytes: 1024,
       timeout: 120, // 2 minute timeout
     });
 
@@ -141,6 +142,7 @@ async function fetchTikTokComments(postUrl, maxResults = 100) {
       postURLs: [postUrl],
       commentsPerPost: maxResults,
     }, {
+      memoryMbytes: 1024,
       timeout: 120,
     });
 
@@ -172,6 +174,7 @@ async function fetchInstagramComments(postUrl, maxResults = 100) {
       directUrls: [postUrl],
       resultsLimit: maxResults,
     }, {
+      memoryMbytes: 1024,
       timeout: 120,
     });
 
@@ -500,6 +503,7 @@ app.post("/api/fb-pages/fetch", async (req, res) => {
       resultsLimit: maxPosts,
       minPostDate: todayStr,
     }, {
+      memoryMbytes: 1024,
       timeout: 180, // 3 minute timeout
     });
 
