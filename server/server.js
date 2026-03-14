@@ -118,9 +118,8 @@ async function fetchFacebookComments(postUrl, maxResults = 100) {
     if (!items || items.length === 0) return [];
 
     return items.map(item => {
-      const author = item.profileName || item.name || "User";
       const text = item.text || item.message || "";
-      return `${author}: ${text}`;
+      return text;
     }).filter(c => c.length > 10);
   } catch (error) {
     console.error(`Error fetching FB comments for ${postUrl}:`, error.message);
@@ -150,9 +149,8 @@ async function fetchTikTokComments(postUrl, maxResults = 100) {
     if (!items || items.length === 0) return [];
 
     return items.map(item => {
-      const author = item.uniqueId || item.nickname || "User";
       const text = item.text || item.comment || "";
-      return `${author}: ${text}`;
+      return text;
     }).filter(c => c.length > 10);
   } catch (error) {
     console.error(`Error fetching TikTok comments for ${postUrl}:`, error.message);
@@ -182,9 +180,8 @@ async function fetchInstagramComments(postUrl, maxResults = 100) {
     if (!items || items.length === 0) return [];
 
     return items.map(item => {
-      const author = item.ownerUsername || item.username || "User";
       const text = item.text || "";
-      return `${author}: ${text}`;
+      return text;
     }).filter(c => c.length > 10);
   } catch (error) {
     console.error(`Error fetching IG comments for ${postUrl}:`, error.message);
@@ -597,8 +594,7 @@ app.post("/api/fb-pages/filter-analyze", async (req, res) => {
             const rawComments = await fetchFacebookComments(post.url, 50);
             // Try meaningful comments first (>= 20 chars)
             const meaningful = rawComments.filter(c => {
-              const textPart = c.includes(":") ? c.split(":").slice(1).join(":").trim() : c;
-              return textPart.length >= 20;
+              return c.trim().length >= 20;
             });
             // Fallback to all comments if no meaningful ones found
             comments = meaningful.length > 0 ? meaningful : rawComments;

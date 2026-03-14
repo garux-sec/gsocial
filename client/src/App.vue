@@ -210,7 +210,7 @@ const loadingFbPosts = ref(false)
 const fbSelectedPages = ref([])
 const showFbPanel = ref(false)
 const fbError = ref('')
-const fbTopic = ref('สถานการณ์สงครามตะวันออกกลาง')
+const fbTopic = ref('สงคราม ตะวันออกกลาง ประเทศอิหร่าน')
 const fbFilteredPosts = ref([])
 const fbFilteredCount = ref(null)
 const loadingFbFilter = ref(false)
@@ -583,6 +583,12 @@ const sentimentEmoji = computed(() => {
               
               <!-- Post Body -->
               <div class="px-5 py-4 space-y-3">
+                <!-- Date/Time -->
+                <div v-if="post.date">
+                  <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">🕒 วันที่และเวลา</span>
+                  <p class="text-slate-300 text-sm mt-1">{{ new Date(post.date).toLocaleString('th-TH') }}</p>
+                </div>
+                
                 <!-- Link -->
                 <div>
                   <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">🔗 ลิงก์</span>
