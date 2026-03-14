@@ -601,7 +601,7 @@ const sentimentEmoji = computed(() => {
                 <div>
                   <div class="flex items-center gap-2 mb-2">
                     <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">💬 ความคิดเห็น</span>
-                    <span v-if="post.fetchedComments?.length" class="text-[10px] text-slate-600">({{ post.fetchedComments.length }} ความเห็นที่มีความหมาย)</span>
+                    <span v-if="post.fetchedComments?.length" class="text-[10px] text-slate-600">({{ post.fetchedComments.length }} รายการ)</span>
                   </div>
                   <div v-if="post.fetchedComments && post.fetchedComments.length > 0" class="max-h-48 overflow-y-auto custom-scrollbar pr-2 space-y-1.5">
                     <div v-for="(comment, cid) in post.fetchedComments" :key="cid" 
@@ -610,7 +610,7 @@ const sentimentEmoji = computed(() => {
                       <span>{{ comment }}</span>
                     </div>
                   </div>
-                  <p v-else class="text-slate-500 text-xs italic">ไม่พบความคิดเห็นที่มีความหมาย</p>
+                  <p v-else class="text-slate-500 text-xs italic">ไม่พบความคิดเห็น</p>
                 </div>
               </div>
             </div>
@@ -947,7 +947,7 @@ const sentimentEmoji = computed(() => {
                   <div v-if="res.comments && res.comments.length > 0">
                     <div class="flex items-center gap-2 mb-2">
                       <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">💬 ความคิดเห็น</span>
-                      <span class="text-[10px] text-slate-600">({{ res.comments.length }} ความเห็นที่มีความหมาย)</span>
+                      <span class="text-[10px] text-slate-600">({{ res.comments.length }} รายการ)</span>
                     </div>
                     <div class="max-h-60 overflow-y-auto custom-scrollbar pr-2 space-y-2">
                       <div v-for="(comment, cid) in res.comments" :key="cid" 
@@ -958,7 +958,7 @@ const sentimentEmoji = computed(() => {
                     </div>
                   </div>
                   <div v-else class="text-slate-500 text-xs italic">
-                    💬 ไม่พบความคิดเห็นที่มีความหมายในโพสต์นี้
+                    💬 ไม่พบความคิดเห็น
                   </div>
                 </div>
               </div>
