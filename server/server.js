@@ -5,9 +5,10 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { google } = require("googleapis");
 const puppeteer = require("puppeteer");
 const { ApifyClient } = require("apify-client");
+const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5050;
 
 app.use(cors());
 app.use(express.json());
@@ -621,7 +622,14 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });
 });
 
+// ── Serve Frontend ─────────────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, "../client/dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+});
+
 // ── Start ────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🚀  Social Listening API running on http://localhost:${PORT}\n`);
+  console.log(`\n🚀  Social Listening System running on http://localhost:${PORT}\n`);
 });
