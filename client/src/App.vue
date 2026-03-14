@@ -29,6 +29,23 @@ import axios from 'axios'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
+ChartJS.register(ArcElement, Tooltip, Legend)
+
+// ── Authentication ───────────────────────────────────────────────────
+const isAuthenticated = ref(false)
+const loginUsername = ref('')
+const loginPassword = ref('')
+const loginError = ref('')
+
+function handleLogin() {
+  if (loginUsername.value === 'admin' && loginPassword.value === 'G@rub0ng') {
+    isAuthenticated.value = true
+    loginError.value = ''
+  } else {
+    loginError.value = 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง'
+  }
+}
+
 // ── State ────────────────────────────────────────────────────────────
 const keyword = ref('')
 const loadingSearch = ref(false)
@@ -323,24 +340,90 @@ const sentimentEmoji = computed(() => {
 
 <!-- template parts are skipped since I only want to show the full structure below -->
 <template>
-  <div class="min-h-screen pb-12">
-    <!-- Header -->
-    <header class="px-4 pt-8 pb-4 text-center">
-      <div class="flex items-center justify-center gap-3 mb-2">
-        <div class="p-2 rounded-xl bg-primary/20">
-          <Zap class="w-7 h-7 text-primary-light" />
+  <div class="min-h-screen relative font-sans text-slate-100 flex flex-col selection:bg-blue-500/30 selection:text-blue-200">
+    <!-- Background Patterns -->
+    <div class="absolute inset-0 pattern-bg pointer-events-none opacity-40"></div>
+    <div class="blob w-96 h-96 top-0 left-0 bg-blue-600/20 blur-[120px]"></div>
+    <div class="blob w-80 h-80 bottom-0 right-0 bg-blue-400/20 blur-[100px] animation-delay-2000"></div>
+
+    <!-- ── Login Screen ─────────────────────────────────────────────────── -->
+    <div v-if="!isAuthenticated" class="flex-1 flex flex-col items-center justify-center p-4 relative z-10 w-full min-h-screen">
+      <div class="max-w-md w-full glass p-8 border-white/10 text-center relative overflow-hidden">
+        <div class="absolute -top-20 -left-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-400/10 border border-blue-500/30 mb-6 shadow-lg shadow-blue-500/10">
+          <Globe class="w-8 h-8 text-blue-400" />
         </div>
-        <h1 class="text-3xl md:text-4xl font-bold tracking-tight">
-          <span class="text-primary-light">Social</span>
-          <span class="text-white"> Listening</span>
+        <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-400 mb-2">
+          Social Listening
         </h1>
+        <p class="text-slate-400 text-sm mb-8">กรุณาเข้าสู่ระบบเพื่อใช้งาน Dashboard</p>
+
+        <form @submit.prevent="handleLogin" class="space-y-5 text-left">
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block uppercase tracking-wider font-semibold">ชื่อผู้ใช้งาน (Username)</label>
+            <input v-model="loginUsername" type="text" 
+                   class="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white
+                          placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50
+                          focus:border-blue-500/50 transition-all text-sm" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block uppercase tracking-wider font-semibold">รหัสผ่าน (Password)</label>
+            <input v-model="loginPassword" type="password" 
+                   class="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white
+                          placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50
+                          focus:border-blue-500/50 transition-all text-sm" />
+          </div>
+          
+          <div v-if="loginError" class="p-3 bg-negative/10 border border-negative/20 rounded-xl text-negative text-sm text-center">
+            {{ loginError }}
+          </div>
+
+          <button type="submit" class="w-full py-3.5 mt-2 rounded-xl font-bold text-white transition-all duration-300
+                         bg-gradient-to-r from-blue-500/80 to-blue-600/80 hover:from-blue-500 hover:to-blue-600
+                         border border-blue-500/30 hover:-translate-y-0.5 shadow-lg flex justify-center items-center">
+            เข้าสู่ระบบ
+          </button>
+        </form>
       </div>
-      <p class="text-slate-400 text-sm flex items-center justify-center gap-2">
-        <span>Step 1: Search News/Links</span>
-        <span class="text-white/20">→</span>
-        <span>Step 2: AI Sentiment Analysis</span>
-      </p>
-    </header>
+    </div>
+
+    <!-- ── Main Dashboard ───────────────────────────────────────────────── -->
+    <div v-else class="flex-1 flex flex-col relative z-10 w-full min-h-screen">
+      <!-- Navbar w/ Logout -->
+      <nav class="flex items-center justify-between px-4 sm:px-8 py-5 border-b border-white/5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-400/5 border border-blue-500/30 flex items-center justify-center shadow-lg shadow-blue-500/10">
+            <Globe class="w-5 h-5 text-blue-400" />
+          </div>
+          <span class="font-bold text-lg md:text-xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
+            Social Listening
+          </span>
+        </div>
+        <button @click="isAuthenticated = false; loginUsername = ''; loginPassword = ''" 
+                class="text-sm font-medium text-slate-400 hover:text-white px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+          ออกจากระบบ
+        </button>
+      </nav>
+
+      <!-- Header -->
+      <header class="px-4 pt-8 pb-4 text-center">
+        <div class="flex items-center justify-center gap-3 mb-2">
+          <div class="p-2 rounded-xl bg-primary/20">
+            <Zap class="w-7 h-7 text-primary-light" />
+          </div>
+          <h1 class="text-3xl md:text-4xl font-bold tracking-tight">
+            <span class="text-primary-light">Social</span>
+            <span class="text-white"> Listening</span>
+          </h1>
+        </div>
+        <p class="text-slate-400 text-sm flex items-center justify-center gap-2">
+          <span>Step 1: Search News/Links</span>
+          <span class="text-white/20">→</span>
+          <span>Step 2: AI Sentiment Analysis</span>
+        </p>
+      </header>
 
     <!-- Search Bar -->
     <section class="max-w-2xl mx-auto px-4 mb-8">
@@ -934,9 +1017,11 @@ const sentimentEmoji = computed(() => {
     </div>
 
     <!-- Footer -->
-    <footer class="text-center text-slate-600 text-xs mt-20 mb-4">
+    <footer v-if="isAuthenticated" class="text-center text-slate-600 text-xs mt-20 mb-4 pb-8 z-10 w-full relative">
       Built with Vue.js · Gemini AI · Google Search
     </footer>
+
+    </div><!-- End Dashboard/v-else -->
   </div>
 </template>
 
