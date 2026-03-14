@@ -458,6 +458,75 @@ app.post("/api/analyze", async (req, res) => {
   }
 });
 
+// ── Facebook Page Posts ──────────────────────────────────────────────
+const FB_PAGES = [
+  { name: "THE STANDARD", url: "https://www.facebook.com/thestandardth", icon: "📰" },
+  { name: "Thai PBS", url: "https://www.facebook.com/ThaiPBS", icon: "📺" },
+  { name: "TNN", url: "https://www.facebook.com/TNNthailand", icon: "📡" },
+  { name: "กระทรวงการคลัง", url: "https://www.facebook.com/MoFNewsStationThailand", icon: "🏦" },
+  { name: "กระทรวงกลาโหม", url: "https://www.facebook.com/modprth", icon: "🛡️" },
+];
+
+// GET: Return the list of configured pages
+app.get("/api/fb-pages", (_req, res) => {
+  res.json({ pages: FB_PAGES });
+});
+
+// POST: Fetch posts from selected Facebook pages
+app.post("/api/fb-pages/fetch", async (req, res) => {
+  try {
+    const { pageUrls, maxPosts = 5 } = req.body;
+
+    if (!pageUrls || pageUrls.length === 0) {
+      return res.status(400).json({ error: "No page URLs specified" });
+    }
+
+    if (!process.env.APIFY_API_TOKEN) {
+      return res.status(500).json({ error: "APIFY_API_TOKEN not configured" });
+    }
+
+    // Get today's date at midnight for filtering
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split("T")[0]; // e.g. "2026-03-14"
+
+    console.log(`📘 Fetching Facebook posts from ${pageUrls.length} pages since ${todayStr}...`);
+
+    const startUrls = pageUrls.map(url => ({ url }));
+
+    const run = await apifyClient.actor("apify/facebook-posts-scraper").call({
+      startUrls,
+      resultsLimit: maxPosts,
+      minPostDate: todayStr,
+    }, {
+      timeout: 180, // 3 minute timeout
+    });
+
+    const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+
+    if (!items || items.length === 0) {
+      return res.json({ posts: [], message: "No posts found for today" });
+    }
+
+    const posts = items.map(item => ({
+      pageName: item.pageName || item.user?.name || "Unknown",
+      text: item.text || item.message || "",
+      url: item.url || item.postUrl || "",
+      date: item.time || item.timestamp || "",
+      likes: item.likes || item.reactionsCount || 0,
+      comments: item.comments || item.commentsCount || 0,
+      shares: item.shares || item.sharesCount || 0,
+      media: item.media?.[0]?.thumbnail || item.imageUrl || null,
+    }));
+
+    console.log(`✅ Fetched ${posts.length} posts from Facebook pages`);
+    res.json({ posts });
+  } catch (error) {
+    console.error("FB Pages Error:", error.message);
+    res.status(500).json({ error: "Failed to fetch Facebook page posts: " + error.message });
+  }
+});
+
 // ── Health check ─────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });

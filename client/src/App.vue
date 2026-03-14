@@ -186,6 +186,88 @@ function searchFromHistory(kw) {
   handleSearch()
 }
 
+// ── Facebook Pages Feature ──────────────────────────────────────────
+const fbPages = ref([])
+const fbPosts = ref([])
+const loadingFbPosts = ref(false)
+const fbSelectedPages = ref([])
+const showFbPanel = ref(false)
+const fbError = ref('')
+
+async function fetchFbPages() {
+  try {
+    const { data } = await axios.get('/api/fb-pages')
+    fbPages.value = data.pages
+    fbSelectedPages.value = data.pages.map(p => p.url) // Select all by default
+  } catch (e) {
+    console.error('Failed to fetch FB pages:', e)
+  }
+}
+
+async function fetchFbPosts() {
+  if (fbSelectedPages.value.length === 0) {
+    fbError.value = 'กรุณาเลือกอย่างน้อย 1 เพจ'
+    return
+  }
+  
+  loadingFbPosts.value = true
+  fbError.value = ''
+  fbPosts.value = []
+  
+  try {
+    const { data } = await axios.post('/api/fb-pages/fetch', {
+      pageUrls: fbSelectedPages.value,
+      maxPosts: 5,
+    })
+    fbPosts.value = data.posts || []
+    if (fbPosts.value.length === 0) {
+      fbError.value = 'ไม่พบโพสต์วันนี้จากเพจที่เลือก'
+    }
+  } catch (e) {
+    fbError.value = e.response?.data?.error || 'ดึงข้อมูลเพจไม่สำเร็จ'
+  } finally {
+    loadingFbPosts.value = false
+  }
+}
+
+async function analyzeFbPosts() {
+  if (fbPosts.value.length === 0) return
+  
+  loadingAnalysis.value = true
+  error.value = ''
+  
+  // Convert FB posts to the same format as search results
+  const results = fbPosts.value.map(p => ({
+    title: p.pageName + ': ' + (p.text?.substring(0, 80) || 'โพสต์'),
+    snippet: p.text || '',
+    link: p.url || '',
+    selected: true,
+  }))
+  
+  try {
+    const { data } = await axios.post('/api/analyze', {
+      keyword: 'Facebook Pages - ' + new Date().toLocaleDateString('th-TH'),
+      searchType: 'facebook-pages',
+      results,
+    })
+    analysisResult.value = data
+    keyword.value = 'Facebook Pages Monitor'
+  } catch (e) {
+    error.value = e.response?.data?.error || 'วิเคราะห์ไม่สำเร็จ'
+  } finally {
+    loadingAnalysis.value = false
+  }
+}
+
+function toggleFbPage(url) {
+  const idx = fbSelectedPages.value.indexOf(url)
+  if (idx >= 0) fbSelectedPages.value.splice(idx, 1)
+  else fbSelectedPages.value.push(url)
+}
+
+// Load FB pages on mount
+fetchFbPages()
+
 // ── Insight Helpers ──────────────────────────────────────────────────
 const dominantSentiment = computed(() => {
   if (!analysisResult.value) return null
@@ -257,7 +339,119 @@ const sentimentEmoji = computed(() => {
           </span>
         </button>
       </form>
+
+      <!-- Facebook Pages Toggle Button -->
+      <div class="mt-4 text-center">
+        <button @click="showFbPanel = !showFbPanel" 
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300"
+                :class="showFbPanel 
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                  : 'bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10 hover:text-white'">
+          <span class="text-lg">📘</span>
+          {{ showFbPanel ? 'ซ่อน Facebook Monitor' : 'Facebook Pages Monitor' }}
+        </button>
+      </div>
     </section>
+
+    <!-- Facebook Pages Panel -->
+    <Transition name="fade">
+      <div v-if="showFbPanel" class="max-w-4xl mx-auto mb-8 px-4">
+        <div class="glass p-6 border-white/10">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-xl">📘</span>
+            <h2 class="font-bold text-white text-lg">Facebook Pages Monitor</h2>
+            <span class="text-xs text-slate-500 ml-auto">ดึงโพสต์ประจำวันจากเพจที่กำหนด</span>
+          </div>
+
+          <!-- Page Selection -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+            <button v-for="page in fbPages" :key="page.url"
+                    @click="toggleFbPage(page.url)"
+                    class="flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left"
+                    :class="fbSelectedPages.includes(page.url) 
+                      ? 'bg-blue-500/10 border-blue-500/30 text-white' 
+                      : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'">
+              <img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64" class="w-6 h-6 rounded" alt="FB">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate">{{ page.icon }} {{ page.name }}</p>
+              </div>
+              <div class="w-5 h-5 rounded border flex items-center justify-center shrink-0"
+                   :class="fbSelectedPages.includes(page.url) ? 'bg-blue-500 border-blue-500' : 'border-white/20'">
+                <span v-if="fbSelectedPages.includes(page.url)" class="text-white text-xs">✓</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Fetch Button -->
+          <div class="text-center mb-5">
+            <button @click="fetchFbPosts" :disabled="loadingFbPosts || fbSelectedPages.length === 0"
+                    class="px-6 py-2.5 rounded-xl font-semibold text-white transition-all duration-300
+                           bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30
+                           disabled:opacity-40 disabled:cursor-not-allowed">
+              <span v-if="loadingFbPosts" class="flex items-center gap-2">
+                <span class="loader !w-4 !h-4 !border-2"></span>
+                กำลังดึงข้อมูล… (อาจใช้เวลา 1-3 นาที)
+              </span>
+              <span v-else class="flex items-center gap-2">
+                📥 ดึงโพสต์วันนี้ ({{ fbSelectedPages.length }} เพจ)
+              </span>
+            </button>
+          </div>
+
+          <!-- FB Error -->
+          <div v-if="fbError" class="text-center text-amber-400 text-sm mb-4 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+            {{ fbError }}
+          </div>
+
+          <!-- Fetched Posts -->
+          <div v-if="fbPosts.length > 0" class="space-y-4">
+            <div class="flex items-center gap-2 mb-2">
+              <h3 class="text-white font-semibold text-base">โพสต์ที่ดึงมาได้ ({{ fbPosts.length }})</h3>
+            </div>
+            
+            <div class="grid gap-3 max-h-96 overflow-y-auto custom-scrollbar pr-2">
+              <div v-for="(post, i) in fbPosts" :key="i" 
+                   class="bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-xl border border-white/5 p-4">
+                <div class="flex items-start gap-3">
+                  <img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64" class="w-8 h-8 rounded-lg mt-0.5 shrink-0" alt="FB">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-white font-semibold text-sm">{{ post.pageName }}</span>
+                      <span class="text-[10px] text-slate-500">{{ post.date }}</span>
+                    </div>
+                    <p class="text-slate-300 text-sm leading-relaxed line-clamp-3 mb-2">{{ post.text }}</p>
+                    <div class="flex items-center gap-4 text-xs text-slate-500">
+                      <span>👍 {{ post.likes }}</span>
+                      <span>💬 {{ post.comments }}</span>
+                      <span>🔄 {{ post.shares }}</span>
+                      <a v-if="post.url" :href="post.url" target="_blank" class="text-blue-400 hover:underline ml-auto">ดูโพสต์ →</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Analyze Button -->
+            <div class="text-center pt-4">
+              <button @click="analyzeFbPosts" :disabled="loadingAnalysis"
+                      class="px-8 py-3 rounded-xl font-bold text-white transition-all duration-300
+                             bg-gradient-to-r from-blue-500/30 to-cyan-500/30 hover:from-blue-500/40 hover:to-cyan-500/40
+                             border border-blue-500/30 hover:-translate-y-0.5
+                             disabled:opacity-40 disabled:cursor-not-allowed shadow-lg">
+                <span v-if="loadingAnalysis" class="flex items-center gap-2">
+                  <span class="loader !w-5 !h-5 !border-2"></span>
+                  กำลังวิเคราะห์…
+                </span>
+                <span v-else class="flex items-center gap-2">
+                  <Sparkles class="w-5 h-5" />
+                  วิเคราะห์โพสต์ทั้งหมด ({{ fbPosts.length }} โพสต์)
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Error State -->
     <div v-if="error" class="max-w-xl mx-auto px-4 mb-8">
