@@ -347,8 +347,8 @@ const sentimentEmoji = computed(() => {
     <div class="blob w-80 h-80 bottom-0 right-0 bg-blue-400/20 blur-[100px] animation-delay-2000"></div>
 
     <!-- ── Login Screen ─────────────────────────────────────────────────── -->
-    <div v-if="!isAuthenticated" class="flex-1 flex flex-col items-center justify-center p-4 relative z-10 w-full min-h-screen">
-      <div class="max-w-md w-full glass p-8 border-white/10 text-center relative overflow-hidden">
+    <div v-if="!isAuthenticated" class="absolute inset-0 flex flex-col items-center justify-center p-4 z-20">
+      <div class="max-w-md w-full glass p-8 sm:p-10 border-white/10 text-center relative overflow-hidden backdrop-blur-2xl">
         <div class="absolute -top-20 -left-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute -bottom-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
         
