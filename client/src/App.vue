@@ -277,6 +277,26 @@ function copyPostToClipboard(post) {
   })
 }
 
+const fbAllCopied = ref(false)
+function copyAllPosts() {
+  if (fbFilteredPosts.value.length === 0) return
+  
+  const allText = fbFilteredPosts.value.map((post, i) => {
+    const commentsText = post.fetchedComments && post.fetchedComments.length > 0
+      ? post.fetchedComments.map(c => `  • ${c}`).join('\n')
+      : '  ไม่มีความคิดเห็น'
+    
+    return `${'═'.repeat(50)}\n${i + 1}. ${post.pageName}\nFacebook\n\nลิงก์ : ${post.url || '-'}\nเนื้อหา : ${post.text || '-'}\nความคิดเห็น :\n${commentsText}`
+  }).join('\n\n')
+  
+  const header = `📘 Facebook Pages Monitor\n📅 ${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}\n🔍 ประเด็น: ${fbTopic.value}\n📊 จำนวนโพสต์ที่คัดกรอง: ${fbFilteredPosts.value.length}\n`
+  
+  navigator.clipboard.writeText(header + '\n' + allText).then(() => {
+    fbAllCopied.value = true
+    setTimeout(() => { fbAllCopied.value = false }, 2000)
+  })
+}
+
 function toggleFbPage(url) {
   const idx = fbSelectedPages.value.indexOf(url)
   if (idx >= 0) fbSelectedPages.value.splice(idx, 1)
@@ -444,6 +464,17 @@ const sentimentEmoji = computed(() => {
             <span v-else class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
               ⚠️ ไม่พบโพสต์ที่เกี่ยวข้องกับ "{{ fbTopic }}"
             </span>
+          </div>
+
+          <!-- Copy All Button -->
+          <div v-if="fbFilteredPosts.length > 0" class="text-center mb-4">
+            <button @click="copyAllPosts"
+                    class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+                    :class="fbAllCopied 
+                      ? 'bg-positive/20 text-positive border border-positive/30' 
+                      : 'bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white'">
+              {{ fbAllCopied ? '✅ คัดลอกทั้งหมดแล้ว!' : '📋 Copy ทั้งหมด (' + fbFilteredPosts.length + ' โพสต์)' }}
+            </button>
           </div>
 
           <!-- Filtered Post Cards (Results) -->

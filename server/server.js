@@ -590,11 +590,13 @@ app.post("/api/fb-pages/filter-analyze", async (req, res) => {
         if (post.url && isFacebookUrl(post.url)) {
           try {
             const rawComments = await fetchFacebookComments(post.url, 50);
-            // Filter out short/meaningless comments (< 20 chars)
-            comments = rawComments.filter(c => {
+            // Try meaningful comments first (>= 20 chars)
+            const meaningful = rawComments.filter(c => {
               const textPart = c.includes(":") ? c.split(":").slice(1).join(":").trim() : c;
               return textPart.length >= 20;
             });
+            // Fallback to all comments if no meaningful ones found
+            comments = meaningful.length > 0 ? meaningful : rawComments;
           } catch (e) {
             console.warn(`Could not fetch comments for ${post.url}:`, e.message);
           }
