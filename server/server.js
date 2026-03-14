@@ -603,35 +603,10 @@ app.post("/api/fb-pages/filter-analyze", async (req, res) => {
       })
     );
 
-    // Step 3: Analyze filtered posts (include comments in analysis)
-    const mapText = postsWithComments.map((p, i) => {
-      let text = `[${i + 1}] Page: ${p.pageName}\nContent: ${p.text}\nURL: ${p.url}`;
-      if (p.fetchedComments && p.fetchedComments.length > 0) {
-        text += `\n\n[User Comments]:\n- ${p.fetchedComments.join("\n- ")}`;
-      }
-      return text;
-    });
-
-    const analysis = await analyzeWithGemini(mapText);
-
-    // Build enriched results for the UI
-    const enrichedResults = postsWithComments.map(p => ({
-      title: p.pageName + ": " + (p.text?.substring(0, 80) || "โพสต์"),
-      snippet: p.text || "",
-      link: p.url || "",
-      pageName: p.pageName,
-      platform: "Facebook",
-      postContent: p.text || "",
-      comments: p.fetchedComments || [],
-      commentSource: "Facebook",
-    }));
+    console.log(`✅ Done. Returning ${postsWithComments.length} posts with comments.`);
 
     res.json({
       filteredPosts: postsWithComments,
-      analysis: {
-        ...analysis,
-        enrichedResults,
-      },
     });
   } catch (error) {
     console.error("FB Filter-Analyze Error:", error.message);
