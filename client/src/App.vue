@@ -343,8 +343,8 @@ const sentimentEmoji = computed(() => {
   <div class="min-h-screen relative font-sans text-slate-100 flex flex-col selection:bg-blue-500/30 selection:text-blue-200">
     <!-- Background Patterns -->
     <div class="absolute inset-0 pattern-bg pointer-events-none opacity-40"></div>
-    <div class="blob w-96 h-96 top-0 left-0 bg-blue-600/20 blur-[120px]"></div>
-    <div class="blob w-80 h-80 bottom-0 right-0 bg-blue-400/20 blur-[100px] animation-delay-2000"></div>
+    <div class="absolute blob w-96 h-96 top-0 left-0 bg-blue-600/20 blur-[120px]"></div>
+    <div class="absolute blob w-80 h-80 bottom-0 right-0 bg-blue-400/20 blur-[100px] animation-delay-2000"></div>
 
     <!-- ── Login Screen ─────────────────────────────────────────────────── -->
     <div v-if="!isAuthenticated" class="absolute inset-0 flex flex-col items-center justify-center p-4 z-20">
