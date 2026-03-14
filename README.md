@@ -28,16 +28,23 @@ git clone https://github.com/garux-sec/gsocial.git
 cd gsocial
 ```
 
-*(หมายเหตุ: โค้ดในโฟลเดอร์ \`client/dist\` จำเป็นต้องถูก Build มาให้เรียบร้อยแล้วด้วยคำสั่ง `npm run build` ในฝั่ง Client ซึ่งปัจจุบันบน Github ตัว Client น่าจะโดน Build ไว้เรียบร้อยแล้ว)*
+### 3. ติดตั้งและ Build ฝั่ง Frontend (สำคัญ)
+เนื่องจากโฟลเดอร์ `dist` ไม่ได้ถูกเก็บไว้ใน Git เราจึงต้องทำการ Build หน้าเว็บขึ้นมาที่เครื่อง Server เอง:
+```bash
+cd client
+npm install
+npm run build
+cd ..
+```
 
-### 3. ติดตั้ง Dependencies ฝั่ง Backend
-เข้าไปที่โฟลเดอร์ \`server\` และติดตั้งไลบรารีต่างๆ ที่จำเป็น
+### 4. ติดตั้ง Dependencies ฝั่ง Backend
+เข้าไปที่โฟลเดอร์ `server` และติดตั้งไลบรารีต่างๆ ที่จำเป็น
 ```bash
 cd server
 npm install
 ```
 
-### 4. สร้างและตั้งค่าไฟล์ `.env` ในโฟลเดอร์ Server
+### 5. สร้างและตั้งค่าไฟล์ `.env` ในโฟลเดอร์ Server
 ระบบจำเป็นต้องใช้ API Keys ในการทำงาน สร้างไฟล์ตัวแปรแวดล้อม:
 ```bash
 nano .env
