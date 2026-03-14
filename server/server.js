@@ -510,16 +510,22 @@ app.post("/api/fb-pages/fetch", async (req, res) => {
       return res.json({ posts: [], message: "No posts found for today" });
     }
 
-    const posts = items.map(item => ({
-      pageName: item.pageName || item.user?.name || "Unknown",
-      text: item.text || item.message || "",
-      url: item.url || item.postUrl || "",
-      date: item.time || item.timestamp || "",
-      likes: item.likes || item.reactionsCount || 0,
-      comments: item.comments || item.commentsCount || 0,
-      shares: item.shares || item.sharesCount || 0,
-      media: item.media?.[0]?.thumbnail || item.imageUrl || null,
-    }));
+    const posts = items.map(item => {
+      let rawText = item.text || item.message || "";
+      // Strip hashtags and trim extra whitespace/newlines
+      rawText = rawText.replace(/#\S+/g, '').replace(/(\n\s*)+\n/g, '\n\n').trim();
+
+      return {
+        pageName: item.pageName || item.user?.name || "Unknown",
+        text: rawText,
+        url: item.url || item.postUrl || "",
+        date: item.time || item.timestamp || "",
+        likes: item.likes || item.reactionsCount || 0,
+        comments: item.comments || item.commentsCount || 0,
+        shares: item.shares || item.sharesCount || 0,
+        media: item.media?.[0]?.thumbnail || item.imageUrl || null,
+      };
+    });
 
     console.log(`✅ Fetched ${posts.length} posts from Facebook pages`);
     res.json({ posts });
