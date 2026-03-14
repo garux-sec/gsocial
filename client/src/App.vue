@@ -283,8 +283,8 @@ async function fetchAndFilterFbPosts() {
 
 function copyPostToClipboard(post) {
   const commentsText = post.fetchedComments && post.fetchedComments.length > 0
-    ? post.fetchedComments.map(c => `  • ${c}`).join('\n')
-    : '  ไม่มีความคิดเห็นที่มีความหมาย'
+    ? post.fetchedComments.map(c => `  - ${c}`).join('\n')
+    : '  ไม่มีความคิดเห็น'
   
   const text = `${post.pageName}\nFacebook\n\nลิงก์ : ${post.url || '-'}\nเนื้อหา : ${post.text || '-'}\nความคิดเห็น :\n${commentsText}`
   
@@ -300,13 +300,13 @@ function copyAllPosts() {
   
   const allText = fbFilteredPosts.value.map((post, i) => {
     const commentsText = post.fetchedComments && post.fetchedComments.length > 0
-      ? post.fetchedComments.map(c => `  • ${c}`).join('\n')
+      ? post.fetchedComments.map(c => `  - ${c}`).join('\n')
       : '  ไม่มีความคิดเห็น'
     
     return `${'═'.repeat(50)}\n${i + 1}. ${post.pageName}\nFacebook\n\nลิงก์ : ${post.url || '-'}\nเนื้อหา : ${post.text || '-'}\nความคิดเห็น :\n${commentsText}`
   }).join('\n\n')
   
-  const header = `📘 Facebook Pages Monitor\n📅 ${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}\n🔍 ประเด็น: ${fbTopic.value}\n📊 จำนวนโพสต์ที่คัดกรอง: ${fbFilteredPosts.value.length}\n`
+  const header = `Facebook Pages Monitor\nวันที่: ${new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}\nประเด็น: ${fbTopic.value}\nจำนวนโพสต์ที่คัดกรอง: ${fbFilteredPosts.value.length}\n`
   
   navigator.clipboard.writeText(header + '\n' + allText).then(() => {
     fbAllCopied.value = true
