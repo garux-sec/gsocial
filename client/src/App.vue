@@ -754,30 +754,68 @@ const sentimentEmoji = computed(() => {
             </div>
           </div>
 
-          <!-- Raw Comments Section -->
-          <div v-if="analysisResult.enrichedResults?.some(r => r.comments && r.comments.length > 0)" class="glass p-6 border-white/10">
-            <div class="flex items-center gap-2 mb-4">
+          <!-- Detailed Post Cards (ข้อมูลเชิงลึกแต่ละโพสต์) -->
+          <div v-if="analysisResult.enrichedResults?.length > 0" class="glass p-6 border-white/10">
+            <div class="flex items-center gap-2 mb-5">
               <List class="w-5 h-5 text-blue-400" />
-              <h2 class="font-bold text-white text-lg">ความคิดเห็นจากแหล่งข้อมูล</h2>
+              <h2 class="font-bold text-white text-lg">ข้อมูลเชิงลึกแต่ละโพสต์</h2>
+              <span class="ml-auto text-xs text-slate-500">{{ analysisResult.enrichedResults.length }} โพสต์ที่คัดกรอง</span>
             </div>
             
-            <div class="space-y-6">
-              <div v-for="(res, i) in analysisResult.enrichedResults" :key="i">
-                <div v-if="res.comments && res.comments.length > 0" class="bg-black/20 rounded-xl p-4 border border-white/5">
-                  <div class="flex items-center gap-2 mb-3">
-                    <span v-if="res.commentSource === 'YouTube'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-wider shrink-0">▶ YouTube</span>
-                    <span v-else-if="res.commentSource === 'Facebook'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-wider shrink-0">📘 Facebook</span>
-                    <span v-else-if="res.commentSource === 'TikTok'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 uppercase tracking-wider shrink-0">🎵 TikTok</span>
-                    <span v-else-if="res.commentSource === 'Instagram'" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-pink-500/20 text-pink-400 border border-pink-500/30 uppercase tracking-wider shrink-0">📷 Instagram</span>
-                    <a :href="res.link" target="_blank" class="text-blue-400 hover:underline font-medium text-sm truncate">
-                      {{ res.title }}
-                    </a>
-                    <span class="ml-auto text-[10px] text-slate-500 shrink-0">{{ res.comments.length }} ความคิดเห็น</span>
-                  </div>
-                  <div class="max-h-80 overflow-y-auto custom-scrollbar pr-2 space-y-2">
-                    <div v-for="(comment, cid) in res.comments" :key="cid" class="glass-alt p-3 rounded-lg text-sm text-slate-300">
-                      {{ comment }}
+            <div class="space-y-5">
+              <div v-for="(res, i) in analysisResult.enrichedResults" :key="i" 
+                   class="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-xl border border-white/5 overflow-hidden">
+                
+                <!-- Post Header -->
+                <div class="bg-blue-500/10 px-5 py-3 border-b border-white/5 flex items-center gap-3">
+                  <img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64" class="w-8 h-8 rounded-lg shrink-0" alt="FB">
+                  <div>
+                    <h3 class="text-white font-bold text-base">{{ res.pageName || res.title?.split(':')[0] || 'Unknown' }}</h3>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">{{ res.platform || res.commentSource || 'Facebook' }}</span>
                     </div>
+                  </div>
+                  <div class="ml-auto shrink-0">
+                    <div class="bg-white rounded-lg p-1 shadow-lg">
+                      <QrcodeVue :value="res.link || ''" :size="48" level="M" />
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Post Body -->
+                <div class="px-5 py-4 space-y-4">
+                  <!-- Link -->
+                  <div>
+                    <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">🔗 ลิงก์</span>
+                    <a :href="res.link" target="_blank" class="block text-blue-400 text-sm hover:underline mt-1 break-all">
+                      {{ res.link }}
+                    </a>
+                  </div>
+                  
+                  <!-- Content -->
+                  <div>
+                    <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">📄 เนื้อหา</span>
+                    <p class="text-slate-200 text-sm leading-relaxed mt-1 whitespace-pre-line">
+                      {{ res.postContent || res.snippet || res.title }}
+                    </p>
+                  </div>
+                  
+                  <!-- Comments -->
+                  <div v-if="res.comments && res.comments.length > 0">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">💬 ความคิดเห็น</span>
+                      <span class="text-[10px] text-slate-600">({{ res.comments.length }} ความเห็นที่มีความหมาย)</span>
+                    </div>
+                    <div class="max-h-60 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                      <div v-for="(comment, cid) in res.comments" :key="cid" 
+                           class="bg-white/5 border border-white/5 p-3 rounded-lg text-sm text-slate-300 flex items-start gap-2">
+                        <span class="text-slate-600 shrink-0">•</span>
+                        <span>{{ comment }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="text-slate-500 text-xs italic">
+                    💬 ไม่พบความคิดเห็นที่มีความหมายในโพสต์นี้
                   </div>
                 </div>
               </div>

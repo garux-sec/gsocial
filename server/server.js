@@ -527,7 +527,7 @@ app.post("/api/fb-pages/fetch", async (req, res) => {
   }
 });
 
-// POST: Filter FB posts by topic using AI, then analyze
+// POST: Filter FB posts by topic using AI, then analyze with comments
 app.post("/api/fb-pages/filter-analyze", async (req, res) => {
   try {
     const { posts, topic } = req.body;
@@ -558,7 +558,6 @@ app.post("/api/fb-pages/filter-analyze", async (req, res) => {
 
     const filterResult = await model.generateContent(filterPrompt);
     let filterText = filterResult.response.text().trim();
-    // Clean markdown formatting if present
     filterText = filterText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     
     let relevantIndices;
@@ -583,24 +582,52 @@ app.post("/api/fb-pages/filter-analyze", async (req, res) => {
       });
     }
 
-    // Step 2: Analyze filtered posts
-    const mapText = filteredPosts.map((p, i) =>
-      `[${i + 1}] Page: ${p.pageName}\nContent: ${p.text}\nURL: ${p.url}`
+    // Step 2: Fetch comments for each filtered post
+    console.log(`💬 Fetching comments for ${filteredPosts.length} filtered posts...`);
+    const postsWithComments = await Promise.all(
+      filteredPosts.map(async (post) => {
+        let comments = [];
+        if (post.url && isFacebookUrl(post.url)) {
+          try {
+            const rawComments = await fetchFacebookComments(post.url, 50);
+            // Filter out short/meaningless comments (< 20 chars)
+            comments = rawComments.filter(c => {
+              const textPart = c.includes(":") ? c.split(":").slice(1).join(":").trim() : c;
+              return textPart.length >= 20;
+            });
+          } catch (e) {
+            console.warn(`Could not fetch comments for ${post.url}:`, e.message);
+          }
+        }
+        return { ...post, fetchedComments: comments };
+      })
     );
+
+    // Step 3: Analyze filtered posts (include comments in analysis)
+    const mapText = postsWithComments.map((p, i) => {
+      let text = `[${i + 1}] Page: ${p.pageName}\nContent: ${p.text}\nURL: ${p.url}`;
+      if (p.fetchedComments && p.fetchedComments.length > 0) {
+        text += `\n\n[User Comments]:\n- ${p.fetchedComments.join("\n- ")}`;
+      }
+      return text;
+    });
 
     const analysis = await analyzeWithGemini(mapText);
 
     // Build enriched results for the UI
-    const enrichedResults = filteredPosts.map(p => ({
+    const enrichedResults = postsWithComments.map(p => ({
       title: p.pageName + ": " + (p.text?.substring(0, 80) || "โพสต์"),
       snippet: p.text || "",
       link: p.url || "",
-      comments: [],
+      pageName: p.pageName,
+      platform: "Facebook",
+      postContent: p.text || "",
+      comments: p.fetchedComments || [],
       commentSource: "Facebook",
     }));
 
     res.json({
-      filteredPosts,
+      filteredPosts: postsWithComments,
       analysis: {
         ...analysis,
         enrichedResults,
