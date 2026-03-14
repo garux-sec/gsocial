@@ -193,6 +193,8 @@ const loadingFbPosts = ref(false)
 const fbSelectedPages = ref([])
 const showFbPanel = ref(false)
 const fbError = ref('')
+const fbTopic = ref('สถานการณ์สงครามตะวันออกกลาง')
+const fbFilteredCount = ref(null)
 
 async function fetchFbPages() {
   try {
@@ -235,23 +237,24 @@ async function analyzeFbPosts() {
   
   loadingAnalysis.value = true
   error.value = ''
-  
-  // Convert FB posts to the same format as search results
-  const results = fbPosts.value.map(p => ({
-    title: p.pageName + ': ' + (p.text?.substring(0, 80) || 'โพสต์'),
-    snippet: p.text || '',
-    link: p.url || '',
-    selected: true,
-  }))
+  fbFilteredCount.value = null
   
   try {
-    const { data } = await axios.post('/api/analyze', {
-      keyword: 'Facebook Pages - ' + new Date().toLocaleDateString('th-TH'),
-      searchType: 'facebook-pages',
-      results,
+    const { data } = await axios.post('/api/fb-pages/filter-analyze', {
+      posts: fbPosts.value,
+      topic: fbTopic.value.trim() || 'ทุกหัวข้อ',
     })
-    analysisResult.value = data
-    keyword.value = 'Facebook Pages Monitor'
+    
+    if (data.message && !data.analysis) {
+      // No relevant posts found
+      fbError.value = data.message
+      fbFilteredCount.value = 0
+      return
+    }
+    
+    fbFilteredCount.value = data.filteredPosts?.length || 0
+    analysisResult.value = data.analysis
+    keyword.value = fbTopic.value || 'Facebook Pages Monitor'
   } catch (e) {
     error.value = e.response?.data?.error || 'วิเคราะห์ไม่สำเร็จ'
   } finally {
@@ -431,20 +434,40 @@ const sentimentEmoji = computed(() => {
               </div>
             </div>
 
+            <!-- Topic Filter Input -->
+            <div class="mb-4">
+              <label class="text-xs text-slate-400 mb-2 block uppercase tracking-wider">🔍 ประเด็นที่ต้องการวิเคราะห์ (AI จะคัดกรองเฉพาะโพสต์ที่เกี่ยวข้อง)</label>
+              <input v-model="fbTopic" type="text" 
+                     placeholder="เช่น สถานการณ์สงครามตะวันออกกลาง, เศรษฐกิจไทย, ชายแดนไทย-กัมพูชา..."
+                     class="w-full py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white
+                            placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50
+                            focus:border-blue-500/50 transition-all text-sm" />
+            </div>
+
+            <!-- Filtered Count Badge -->
+            <div v-if="fbFilteredCount !== null" class="text-center mb-3">
+              <span v-if="fbFilteredCount > 0" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-positive/10 text-positive border border-positive/20">
+                ✅ AI คัดกรองได้ {{ fbFilteredCount }} โพสต์ที่เกี่ยวข้องจาก {{ fbPosts.length }} โพสต์
+              </span>
+              <span v-else class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                ⚠️ ไม่พบโพสต์ที่เกี่ยวข้องกับ "{{ fbTopic }}"
+              </span>
+            </div>
+
             <!-- Analyze Button -->
-            <div class="text-center pt-4">
-              <button @click="analyzeFbPosts" :disabled="loadingAnalysis"
+            <div class="text-center pt-2">
+              <button @click="analyzeFbPosts" :disabled="loadingAnalysis || !fbTopic.trim()"
                       class="px-8 py-3 rounded-xl font-bold text-white transition-all duration-300
                              bg-gradient-to-r from-blue-500/30 to-cyan-500/30 hover:from-blue-500/40 hover:to-cyan-500/40
                              border border-blue-500/30 hover:-translate-y-0.5
                              disabled:opacity-40 disabled:cursor-not-allowed shadow-lg">
                 <span v-if="loadingAnalysis" class="flex items-center gap-2">
                   <span class="loader !w-5 !h-5 !border-2"></span>
-                  กำลังวิเคราะห์…
+                  AI กำลังคัดกรองและวิเคราะห์…
                 </span>
                 <span v-else class="flex items-center gap-2">
                   <Sparkles class="w-5 h-5" />
-                  วิเคราะห์โพสต์ทั้งหมด ({{ fbPosts.length }} โพสต์)
+                  คัดกรอง &amp; วิเคราะห์ "{{ fbTopic }}" ({{ fbPosts.length }} โพสต์)
                 </span>
               </button>
             </div>

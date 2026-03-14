@@ -527,6 +527,91 @@ app.post("/api/fb-pages/fetch", async (req, res) => {
   }
 });
 
+// POST: Filter FB posts by topic using AI, then analyze
+app.post("/api/fb-pages/filter-analyze", async (req, res) => {
+  try {
+    const { posts, topic } = req.body;
+
+    if (!posts || posts.length === 0) {
+      return res.status(400).json({ error: "No posts provided" });
+    }
+    if (!topic) {
+      return res.status(400).json({ error: "No topic specified" });
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+
+    // Step 1: Use Gemini to filter relevant posts
+    const postsList = posts.map((p, i) => `[${i}] ${p.pageName}: ${p.text?.substring(0, 300)}`).join("\n\n");
+
+    const filterPrompt = `
+    You are a smart news filter. Given the topic "${topic}", review the following Facebook posts and return ONLY the indices (numbers) of posts that are RELEVANT to this topic.
+    
+    Posts:
+    ${postsList}
+    
+    Return your answer as a JSON array of indices, e.g. [0, 2, 5]
+    If no posts are relevant, return an empty array []
+    Return ONLY the JSON array, nothing else.
+    `;
+
+    const filterResult = await model.generateContent(filterPrompt);
+    let filterText = filterResult.response.text().trim();
+    // Clean markdown formatting if present
+    filterText = filterText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    
+    let relevantIndices;
+    try {
+      relevantIndices = JSON.parse(filterText);
+    } catch {
+      console.error("Failed to parse filter result:", filterText);
+      relevantIndices = [];
+    }
+
+    const filteredPosts = relevantIndices
+      .filter(i => i >= 0 && i < posts.length)
+      .map(i => posts[i]);
+
+    console.log(`🔍 Topic "${topic}": ${filteredPosts.length}/${posts.length} posts are relevant`);
+
+    if (filteredPosts.length === 0) {
+      return res.json({
+        filteredPosts: [],
+        analysis: null,
+        message: `ไม่พบโพสต์ที่เกี่ยวข้องกับ "${topic}"`,
+      });
+    }
+
+    // Step 2: Analyze filtered posts
+    const mapText = filteredPosts.map((p, i) =>
+      `[${i + 1}] Page: ${p.pageName}\nContent: ${p.text}\nURL: ${p.url}`
+    );
+
+    const analysis = await analyzeWithGemini(mapText);
+
+    // Build enriched results for the UI
+    const enrichedResults = filteredPosts.map(p => ({
+      title: p.pageName + ": " + (p.text?.substring(0, 80) || "โพสต์"),
+      snippet: p.text || "",
+      link: p.url || "",
+      comments: [],
+      commentSource: "Facebook",
+    }));
+
+    res.json({
+      filteredPosts,
+      analysis: {
+        ...analysis,
+        enrichedResults,
+      },
+    });
+  } catch (error) {
+    console.error("FB Filter-Analyze Error:", error.message);
+    res.status(500).json({ error: "Failed to filter and analyze: " + error.message });
+  }
+});
+
 // ── Health check ─────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });
